@@ -21,4 +21,6 @@ class GeneratorAgent(BaseAgent):
             parts.append(f"\nReviewer feedback:\n{review}\n\nApply these improvements.")
 
         parts.append("\nWrite the Lua code now:")
-        return self.invoke("\n".join(parts))
+        raw = self.invoke("\n".join(parts))
+        # LLMs often wrap code in ```lua ... ``` despite prompt instructions — strip it
+        return self.strip_code_fences(raw)

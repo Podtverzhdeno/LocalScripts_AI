@@ -4,6 +4,7 @@ Agent unit tests — mock LLM, no API calls.
 import pytest
 import tempfile
 from unittest.mock import MagicMock, patch
+from agents.base import BaseAgent
 from agents.generator import GeneratorAgent
 from agents.validator import ValidatorAgent
 from agents.reviewer import ReviewerAgent
@@ -103,3 +104,38 @@ def test_reviewer_calls_llm():
     agent = ReviewerAgent(llm)
     agent.review(code="local x = 1", task="define x")
     llm.invoke.assert_called_once()
+
+
+# --- strip_code_fences ---
+
+def test_strip_code_fences_lua_block():
+    raw = '```lua\nprint("hello")\n```'
+    assert BaseAgent.strip_code_fences(raw) == 'print("hello")'
+
+
+def test_strip_code_fences_generic_block():
+    raw = '```\nlocal x = 1\n```'
+    assert BaseAgent.strip_code_fences(raw) == 'local x = 1'
+
+
+def test_strip_code_fences_no_fences():
+    raw = 'print("hello")'
+    assert BaseAgent.strip_code_fences(raw) == 'print("hello")'
+
+
+def test_strip_code_fences_multiline():
+    raw = '```lua\nlocal x = 1\nprint(x)\n```'
+    assert BaseAgent.strip_code_fences(raw) == 'local x = 1\nprint(x)'
+
+
+def test_strip_code_fences_with_surrounding_text():
+    raw = 'Here is the code:\n```lua\nprint(1)\n```\nDone.'
+    assert BaseAgent.strip_code_fences(raw) == 'print(1)'
+
+
+def test_generator_strips_markdown_fences():
+    """Generator must return clean Lua even if LLM wraps in markdown."""
+    llm = make_llm('```lua\nprint("hello")\n```')
+    agent = GeneratorAgent(llm)
+    code = agent.generate(task="print hello")
+    assert code == 'print("hello")'

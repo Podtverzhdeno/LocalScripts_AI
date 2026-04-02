@@ -4,10 +4,14 @@ Runs luac (compile check) and lua (execute) in a sandboxed subprocess.
 Writes each iteration to the session workspace directory.
 """
 
+import os
 import subprocess
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+
+# luac -o needs a null device; /dev/null doesn't exist on Windows
+_NULL_DEVICE = "NUL" if os.name == "nt" else "/dev/null"
 
 
 @dataclass
@@ -69,7 +73,7 @@ class LuaRunner:
             return self._compile_with_lua(lua_file)
 
         result = subprocess.run(
-            ["luac", "-o", "/dev/null", str(lua_file)],
+            ["luac", "-o", _NULL_DEVICE, str(lua_file)],
             capture_output=True,
             text=True,
             timeout=5,

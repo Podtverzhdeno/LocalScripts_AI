@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session — LocalScript</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        pre { tab-size: 4; white-space: pre-wrap; word-break: break-word; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+    <!-- Header -->
+    <header class="border-b border-gray-800 px-6 py-4">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-emerald-400 hover:text-emerald-300 transition-colors">⚡ LocalScript</a>
+            <span id="headerSessionId" class="text-xs text-gray-500 font-mono"></span>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-8 space-y-6">
+
+        <!-- Status Card -->
+        <section id="statusCard" class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold">Session Status</h2>
+                <span id="statusBadge" class="text-xs px-3 py-1 rounded-full"></span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <span class="text-gray-500">Task</span>
+                    <p id="taskText" class="mt-1 text-gray-300">—</p>
+                </div>
+                <div>
+                    <span class="text-gray-500">Iteration</span>
+                    <p id="iterationText" class="mt-1 text-gray-300 font-mono">0</p>
+                </div>
+                <div>
+                    <span class="text-gray-500">Status</span>
+                    <p id="statusText" class="mt-1 text-gray-300">—</p>
+                </div>
+                <div>
+                    <span class="text-gray-500">Final</span>
+                    <p id="finalStatus" class="mt-1 text-gray-300">—</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Errors -->
+        <section id="errorsSection" class="hidden">
+            <h3 class="text-md font-semibold mb-2 text-red-400">⚠ Errors</h3>
+            <pre id="errorsContent" class="bg-red-950 border border-red-900 rounded-lg p-4 text-sm text-red-300 overflow-x-auto"></pre>
+        </section>
+
+        <!-- Iteration Files -->
+        <section>
+            <h3 class="text-md font-semibold mb-3">Iteration Files</h3>
+            <div id="filesList" class="space-y-2">
+                <p class="text-gray-500 text-sm">Loading…</p>
+            </div>
+        </section>
+
+        <!-- File Viewer -->
+        <section id="fileViewer" class="hidden">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-md font-semibold">
+                    <span id="viewerFilename" class="text-emerald-400 font-mono"></span>
+                </h3>
+                <button onclick="closeViewer()" class="text-xs text-gray-400 hover:text-gray-200">✕ Close</button>
+            </div>
+            <pre id="viewerContent" class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-sm text-gray-300 overflow-x-auto max-h-[500px] overflow-y-auto"></pre>
+        </section>
+
+        <!-- Final Lua Output -->
+        <section id="finalSection" class="hidden">
+            <h3 class="text-md font-semibold mb-2 text-emerald-400">✓ Final Lua Output</h3>
+            <pre id="finalContent" class="bg-gray-900 border border-emerald-900 rounded-lg p-4 text-sm text-emerald-200 overflow-x-auto max-h-[500px] overflow-y-auto"></pre>
+        </section>
+
+        <!-- WebSocket Log -->
+        <section>
+            <h3 class="text-md font-semibold mb-2">Live Log</h3>
+            <div id="wsLog" class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-xs font-mono text-gray-400 max-h-48 overflow-y-auto">
+                <p>Connecting…</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        const SESSION_ID = window.location.pathname.split('/session/')[1];
+        const POLL_INTERVAL_MS = 3000;
+
+        document.getElementById('headerSessionId').textContent = SESSION_ID;
+
+        // ── Status rendering ─────────────────────────────────────────────
+        function renderStatus(data) {
+            document.getElementById('taskText').textContent = data.task || '—';
+            document.getElementById('iterationText').textContent = data.iteration;
+            document.getElementById('statusText').textContent = data.status;
+
+            const badge = document.getElementById('statusBadge');
+            const statusMap = {
+                done:    { text: '✓ Done',    cls: 'bg-emerald-900 text-emerald-300' },
+                failed:  { text: '✗ Failed',  cls: 'bg-red-900 text-red-300' },
+                running: { text: '⏳ Running', cls: 'bg-yellow-900 text-yellow-300 pulse' },
+                unknown: { text: '? Unknown', cls: 'bg-gray-700 text-gray-300' },
+            };
+            const s = statusMap[data.status] || statusMap.unknown;
+            badge.textContent = s.text;
+            badge.className = `text-xs px-3 py-1 rounded-full ${s.cls}`;
+
+            document.getElementById('finalStatus').textContent = data.has_final ? '✓ Available' : '—';
+
+            // Errors
+            const errSection = document.getElementById('errorsSection');
+            if (data.errors) {
+                document.getElementById('errorsContent').textContent = data.errors;
+                errSection.classList.remove('hidden');
+            } else {
+                errSection.classList.add('hidden');
+            }
+        }
+
+        // ── Files list ───────────────────────────────────────────────────
+        async function loadFiles() {
+            const container = document.getElementById('filesList');
+            try {
+                const files = await api(`/api/session/${SESSION_ID}/files`);
+                if (!files.length) {
+                    container.innerHTML = '<p class="text-gray-500 text-sm">No files yet.</p>';
+                    return;
+                }
+                container.innerHTML = files.map(f => `
+                    <button onclick="viewFile('${f.name}')"
+                            class="w-full text-left bg-gray-900 border border-gray-800 rounded-lg px-4 py-3
+                                   hover:border-gray-600 transition-colors text-sm flex justify-between items-center">
+                        <span class="font-mono text-gray-300">${escapeHtml(f.name)}</span>
+                        <span class="text-xs text-gray-500">${formatBytes(f.size)}</span>
+                    </button>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400 text-sm">${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        async function viewFile(filename) {
+            const viewer = document.getElementById('fileViewer');
+            const nameEl = document.getElementById('viewerFilename');
+            const contentEl = document.getElementById('viewerContent');
+
+            nameEl.textContent = filename;
+            contentEl.textContent = 'Loading…';
+            viewer.classList.remove('hidden');
+
+            try {
+                const data = await api(`/api/session/${SESSION_ID}/file/${filename}`);
+                contentEl.textContent = data.content;
+            } catch (err) {
+                contentEl.textContent = `Error: ${err.message}`;
+            }
+        }
+
+        function closeViewer() {
+            document.getElementById('fileViewer').classList.add('hidden');
+        }
+
+        // ── Final Lua ────────────────────────────────────────────────────
+        async function loadFinal() {
+            try {
+                const data = await api(`/api/session/${SESSION_ID}/final`);
+                document.getElementById('finalContent').textContent = data.content;
+                document.getElementById('finalSection').classList.remove('hidden');
+            } catch {
+                document.getElementById('finalSection').classList.add('hidden');
+            }
+        }
+
+        // ── WebSocket live updates ───────────────────────────────────────
+        function connectWs() {
+            const logEl = document.getElementById('wsLog');
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${proto}//${location.host}/api/ws/${SESSION_ID}`);
+
+            ws.onopen = () => appendLog(logEl, '● Connected');
+            ws.onclose = () => appendLog(logEl, '● Disconnected');
+            ws.onerror = () => appendLog(logEl, '● WebSocket error');
+
+            ws.onmessage = (evt) => {
+                try {
+                    const msg = JSON.parse(evt.data);
+                    appendLog(logEl, `[${msg.event}] ${JSON.stringify(msg)}`);
+
+                    if (msg.event === 'progress' || msg.event === 'status') {
+                        document.getElementById('iterationText').textContent = msg.iteration;
+                        loadFiles();
+                    }
+                    if (msg.event === 'completed' || msg.event === 'finished') {
+                        refreshAll();
+                    }
+                } catch {
+                    appendLog(logEl, evt.data);
+                }
+            };
+        }
+
+        function appendLog(el, text) {
+            const line = document.createElement('p');
+            const ts = new Date().toLocaleTimeString();
+            line.textContent = `[${ts}] ${text}`;
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // ── Polling fallback ─────────────────────────────────────────────
+        let pollTimer = null;
+
+        async function refreshAll() {
+            try {
+                const data = await api(`/api/session/${SESSION_ID}`);
+                renderStatus(data);
+                loadFiles();
+                if (data.has_final) loadFinal();
+
+                // Stop polling when done
+                if (data.status === 'done' || data.status === 'failed') {
+                    if (pollTimer) clearInterval(pollTimer);
+                }
+            } catch (err) {
+                console.error('Refresh error:', err);
+            }
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────────
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            return (bytes / 1024).toFixed(1) + ' KB';
+        }
+
+        // ── Init ─────────────────────────────────────────────────────────
+        refreshAll();
+        connectWs();
+        pollTimer = setInterval(refreshAll, POLL_INTERVAL_MS);
+    </script>
+</body>
+</html>

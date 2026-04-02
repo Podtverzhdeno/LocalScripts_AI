@@ -1,0 +1,5 @@
+C:\Users\user\scoop\apps\lua\current\bin\lua.exe: [string "        return x + y..."]:1: attempt to perform arithmetic on a nil value (global 'x')
+stack traceback:
+	[string "        return x + y..."]:1: in field 'add'
+	workspace\session_20260402_183304\iteration_2.lua:32: in main chunk
+	[C]: in ?

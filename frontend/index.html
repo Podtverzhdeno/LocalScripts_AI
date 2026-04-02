@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalScript — Lua Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        pre { tab-size: 4; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+    <!-- Header -->
+    <header class="border-b border-gray-800 px-6 py-4">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <h1 class="text-xl font-bold text-emerald-400">⚡ LocalScript</h1>
+            <span class="text-xs text-gray-500">Multi-Agent Lua Generator</span>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- Task Input -->
+        <section class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <h2 class="text-lg font-semibold mb-4">New Task</h2>
+            <div class="flex gap-3">
+                <input
+                    id="taskInput"
+                    type="text"
+                    placeholder="Describe your Lua task, e.g. 'write a fibonacci function'"
+                    class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
+                           placeholder-gray-500"
+                >
+                <button
+                    id="runBtn"
+                    onclick="runTask()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-3
+                           rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Run Task
+                </button>
+            </div>
+            <div id="taskError" class="mt-3 text-red-400 text-sm hidden"></div>
+            <div id="taskSuccess" class="mt-3 text-emerald-400 text-sm hidden"></div>
+        </section>
+
+        <!-- Sessions List -->
+        <section>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Sessions</h2>
+                <button
+                    onclick="loadSessions()"
+                    class="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                    ↻ Refresh
+                </button>
+            </div>
+            <div id="sessionsList" class="space-y-2">
+                <p class="text-gray-500 text-sm">Loading sessions…</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // ── Task runner ──────────────────────────────────────────────────
+        async function runTask() {
+            const input = document.getElementById('taskInput');
+            const btn = document.getElementById('runBtn');
+            const errorEl = document.getElementById('taskError');
+            const successEl = document.getElementById('taskSuccess');
+            const task = input.value.trim();
+
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            if (!task) {
+                errorEl.textContent = 'Please enter a task description.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Starting…';
+
+            try {
+                const data = await api('/api/run-task', {
+                    method: 'POST',
+                    body: JSON.stringify({ task }),
+                });
+                successEl.innerHTML = `Pipeline started! <a href="/session/${data.session_id}" class="underline">View session →</a>`;
+                successEl.classList.remove('hidden');
+                input.value = '';
+                loadSessions();
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Task';
+            }
+        }
+
+        // ── Sessions loader ──────────────────────────────────────────────
+        async function loadSessions() {
+            const container = document.getElementById('sessionsList');
+            try {
+                const sessions = await api('/api/sessions');
+                if (!sessions.length) {
+                    container.innerHTML = '<p class="text-gray-500 text-sm">No sessions yet. Run a task to get started.</p>';
+                    return;
+                }
+                container.innerHTML = sessions.map(s => `
+                    <a href="/session/${s.session_id}"
+                       class="block bg-gray-900 border border-gray-800 rounded-lg px-5 py-4
+                              hover:border-gray-600 transition-colors fade-in">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-mono text-gray-400">${s.session_id}</span>
+                                <p class="text-sm mt-1 text-gray-300">${escapeHtml(s.task || '(no task)')}</p>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded ${s.has_final ? 'bg-emerald-900 text-emerald-300' : 'bg-yellow-900 text-yellow-300'}">
+                                ${s.has_final ? '✓ Done' : '⏳ Pending'}
+                            </span>
+                        </div>
+                    </a>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400 text-sm">Failed to load sessions: ${escapeHtml(err.message)}</p>`;
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('taskInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') runTask();
+        });
+
+        // Initial load
+        loadSessions();
+    </script>
+</body>
+</html>
