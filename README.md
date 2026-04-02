@@ -29,6 +29,14 @@ cp .env.example .env        # add your OPENAI_API_KEY
 python main.py --task "write a fibonacci function"
 ```
 
+**FRONTEND**
+
+pip install fastapi "uvicorn[standard]" websockets  
+  
+python api/server.py  
+  
+python api/server.py --host 0.0.0.0 --port 8080  
+  
 **Local mode (no API key):**
 ```bash
 # Requires Ollama running: https://ollama.ai
@@ -86,3 +94,4 @@ START → generate → validate → review → END
 - Python 3.11+
 - `lua5.4` + `luac` (`apt install lua5.4` / `brew install lua`)
 - OpenAI API key **or** Ollama running locally
+
