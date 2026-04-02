@@ -20,8 +20,8 @@ The graph retries up to `max_iterations` times before giving up. Each iteration 
 ## Quickstart
 
 ```bash
-git clone <repo>
-cd localscript
+git clone https://github.com/Podtverzhdeno/LocalScripts_AI
+cd LocalScripts_AI
 
 pip install -r requirements.txt
 cp .env.example .env        # add your OPENAI_API_KEY
