@@ -31,9 +31,20 @@ def review_done_or_retry(state: AgentState) -> str:
     return "generate"
 
 
-def build_pipeline(llm: BaseChatModel) -> StateGraph:
-    """Build and compile the LangGraph StateGraph with injected LLM."""
-    node_generate, node_validate, node_review, node_fail = make_nodes(llm)
+def build_pipeline(
+    llm: BaseChatModel,
+    *,
+    llm_generator: BaseChatModel | None = None,
+    llm_validator: BaseChatModel | None = None,
+    llm_reviewer: BaseChatModel | None = None,
+) -> StateGraph:
+    """Build and compile the LangGraph StateGraph with injected LLM(s)."""
+    node_generate, node_validate, node_review, node_fail = make_nodes(
+        llm,
+        llm_generator=llm_generator,
+        llm_validator=llm_validator,
+        llm_reviewer=llm_reviewer,
+    )
 
     graph = StateGraph(AgentState)
 
@@ -68,13 +79,27 @@ def run_pipeline(
 ) -> AgentState:
     """
     Entry point. If llm is None, loads from settings.yaml.
+    Supports per-agent LLM overrides via config/settings.yaml `agents:` section.
     Accepts external llm for testing without API keys.
     """
-    if llm is None:
-        from llm.factory import get_llm
-        llm = get_llm()
+    from llm.factory import get_llm
 
-    pipeline = build_pipeline(llm)
+    # Load per-agent LLMs from config (returns default if no override)
+    if llm is None:
+        llm = get_llm()
+        llm_generator = get_llm("generator")
+        llm_validator = get_llm("validator")
+        llm_reviewer = get_llm("reviewer")
+    else:
+        # External LLM provided (e.g. tests) — use it for all agents
+        llm_generator = llm_validator = llm_reviewer = None
+
+    pipeline = build_pipeline(
+        llm,
+        llm_generator=llm_generator,
+        llm_validator=llm_validator,
+        llm_reviewer=llm_reviewer,
+    )
 
     initial_state: AgentState = {
         "task": task,

@@ -1,5 +1,0 @@
-C:\Users\user\scoop\apps\lua\current\bin\lua.exe: workspace\session_20260402_183304\iteration_1.lua:4: attempt to call a nil value (global 'loadstring')
-stack traceback:
-	workspace\session_20260402_183304\iteration_1.lua:4: in local 'calculator'
-	workspace\session_20260402_183304\iteration_1.lua:17: in main chunk
-	[C]: in ?

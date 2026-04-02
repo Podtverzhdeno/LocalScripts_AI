@@ -1,6 +1,0 @@
-C:\Users\user\scoop\apps\lua\current\bin\lua.exe: workspace\session_20260402_194802\iteration_2.lua:30: Invalid operation or division by zero
-stack traceback:
-	[C]: in function 'error'
-	workspace\session_20260402_194802\iteration_2.lua:30: in local 'calculate'
-	workspace\session_20260402_194802\iteration_2.lua:43: in main chunk
-	[C]: in ?

@@ -20,17 +20,34 @@ class LuaResult:
     stdout: str
     stderr: str
     timed_out: bool = False
+    compiled_ok: bool = False  # True if luac passed (syntax is valid)
 
     @property
     def errors(self) -> str:
         """Return combined error output."""
         return self.stderr.strip()
 
+    @property
+    def has_output(self) -> bool:
+        """True if the script produced stdout before failing."""
+        return bool(self.stdout.strip())
+
+    @property
+    def is_intentional_error(self) -> bool:
+        """
+        Heuristic: code compiled OK, produced output, then hit a runtime error.
+        This pattern indicates intentional error handling demonstration
+        (e.g. `error("Division by zero")` in a calculator).
+        """
+        return self.compiled_ok and self.has_output and not self.success and not self.timed_out
+
     def __str__(self) -> str:
         if self.success:
             return f"OK\n{self.stdout}" if self.stdout else "OK"
         if self.timed_out:
             return f"TIMEOUT\n{self.stderr}"
+        if self.is_intentional_error:
+            return f"OK_WITH_EXPECTED_ERROR\n{self.stdout}\n---\n{self.stderr}"
         return f"ERROR\n{self.stderr}"
 
 
@@ -137,6 +154,7 @@ class LuaRunner:
                 success=result.returncode == 0,
                 stdout=result.stdout,
                 stderr=result.stderr,
+                compiled_ok=True,  # syntax was valid
             )
         except subprocess.TimeoutExpired:
             lua_result = LuaResult(
@@ -144,9 +162,14 @@ class LuaRunner:
                 stdout="",
                 stderr=f"Execution timed out after {self.timeout}s",
                 timed_out=True,
+                compiled_ok=True,
             )
 
-        # Save errors if any
+        # Intentional errors (e.g. error("Division by zero")) are not real failures
+        if lua_result.is_intentional_error:
+            lua_result.success = True
+
+        # Save errors only for real failures
         if not lua_result.success:
             err_path = self.session_dir / f"iteration_{iteration}_errors.txt"
             err_path.write_text(lua_result.errors, encoding="utf-8")

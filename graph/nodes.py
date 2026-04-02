@@ -17,18 +17,34 @@ def _get_runner(state: AgentState) -> LuaRunner:
     return LuaRunner(session_dir=state["session_dir"], timeout=timeout)
 
 
-def make_nodes(llm: BaseChatModel):
+def make_nodes(
+    llm: BaseChatModel | None = None,
+    *,
+    llm_generator: BaseChatModel | None = None,
+    llm_validator: BaseChatModel | None = None,
+    llm_reviewer: BaseChatModel | None = None,
+):
     """
     Factory that returns node functions with LLM injected via closure.
-    Called once in pipeline.py — clean dependency injection.
+
+    Supports per-agent LLM overrides for hybrid pipelines:
+        - llm_generator: model for code generation (default: llm)
+        - llm_validator: model for error explanation (default: llm)
+        - llm_reviewer:  model for code review (default: llm)
+
+    If a per-agent LLM is not provided, falls back to the shared `llm`.
     """
     from agents.generator import GeneratorAgent
     from agents.validator import ValidatorAgent
     from agents.reviewer import ReviewerAgent
 
+    _gen_llm = llm_generator or llm
+    _val_llm = llm_validator or llm
+    _rev_llm = llm_reviewer or llm
+
     def node_generate(state: AgentState) -> dict:
         """Generator node — writes or fixes Lua code."""
-        agent = GeneratorAgent(llm)
+        agent = GeneratorAgent(_gen_llm)
         code = agent.generate(
             task=state["task"],
             errors=state.get("errors"),
@@ -49,7 +65,7 @@ def make_nodes(llm: BaseChatModel):
     def node_validate(state: AgentState) -> dict:
         """Validator node — runs luac + lua, explains errors via LLM."""
         runner = _get_runner(state)
-        agent = ValidatorAgent(llm, runner)
+        agent = ValidatorAgent(_val_llm, runner)
         is_valid, error_explanation = agent.validate(
             code=state["code"],
             task=state["task"],
@@ -64,7 +80,7 @@ def make_nodes(llm: BaseChatModel):
 
     def node_review(state: AgentState) -> dict:
         """Reviewer node — quality check, may request improvements."""
-        agent = ReviewerAgent(llm)
+        agent = ReviewerAgent(_rev_llm)
         is_done, feedback = agent.review(
             code=state["code"],
             task=state["task"],

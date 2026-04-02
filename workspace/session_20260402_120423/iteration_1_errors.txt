@@ -1,1 +1,0 @@
-C:\Users\user\scoop\apps\lua\current\bin\luac.exe: workspace\session_20260402_120423\iteration_1.lua:1: unexpected symbol near '`'

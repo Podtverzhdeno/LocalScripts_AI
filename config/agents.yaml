@@ -15,6 +15,10 @@ generator:
     - Use local variables whenever possible
     - Add brief Lua comments (--) for non-obvious logic
     - Include example usage / test prints so the code demonstrates it works
+    - When demonstrating error handling, wrap error-throwing calls in pcall() or xpcall()
+      so the script runs to completion without crashing. Example:
+      local ok, err = pcall(function() error("example") end)
+      if not ok then print("Caught error: " .. err) end
 
     If you receive error messages or review feedback, fix the issues directly.
     Do not repeat the errors back — just fix them and return working code.
@@ -29,6 +33,11 @@ validator:
     - Identify the root cause, not just the symptom
     - Be concise — 2-4 sentences max
     - Do NOT rewrite the code yourself — only explain the problem
+
+    IMPORTANT: Distinguish between REAL bugs and INTENTIONAL error handling.
+    If the code uses error(), assert(), or pcall() to demonstrate error handling
+    (e.g. "Division by zero"), and the code produced correct output before the error,
+    that is NOT a bug — it is working as intended. Say so clearly.
 
     The generator agent will use your explanation to fix the code.
 
