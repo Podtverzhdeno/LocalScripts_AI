@@ -1,0 +1,4 @@
+Write a Lua module with a fibonacci function that:
+- Accepts a number n as argument
+- Returns the nth Fibonacci number using recursion with memoization
+- Prints fib(0) through fib(10) to demonstrate it works

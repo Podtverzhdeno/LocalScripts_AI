@@ -1,0 +1,7 @@
+Write a Lua function that parses a raw HTTP response string into a table with fields:
+- status_code (number)
+- status_text (string)
+- headers (table of key-value pairs)
+- body (string)
+
+Include a test that parses an example HTTP/1.1 200 OK response and prints each field.

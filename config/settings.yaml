@@ -1,0 +1,12 @@
+llm:
+  backend: openrouter          # openai | ollama
+  model: openai/gpt-4o-mini       # or llama3.2, codellama, etc.
+  temperature: 0.2
+  ollama_base_url: http://localhost:11434
+
+pipeline:
+  max_iterations: 3
+  execution_timeout: 10    # seconds for lua execution
+
+workspace:
+  base_dir: workspace

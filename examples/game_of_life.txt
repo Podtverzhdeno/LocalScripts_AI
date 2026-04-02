@@ -1,0 +1,5 @@
+Implement Conway's Game of Life in Lua:
+- Use a 2D table to represent the grid (20x20)
+- Implement the standard rules (birth, survival, death)
+- Initialize with a glider pattern
+- Run for 5 generations and print each generation to stdout using # for alive cells and . for dead
