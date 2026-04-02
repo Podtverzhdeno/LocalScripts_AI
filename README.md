@@ -34,9 +34,7 @@ python main.py --task "write a fibonacci function"
 pip install fastapi "uvicorn[standard]" websockets  
   
 python api/server.py  
-  
-python api/server.py --host 0.0.0.0 --port 8080  
-  
+    
 **Local mode (no API key):**
 ```bash
 # Requires Ollama running: https://ollama.ai
