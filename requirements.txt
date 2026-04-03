@@ -8,3 +8,4 @@ python-dotenv>=1.0.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 websockets>=14.0
+mcp[cli]>=1.2.0

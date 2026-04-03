@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "localscript": {
+      "command": "python",
+      "args": ["mcp_server/server.py"],
+      "cwd": "C:\\Users\\user\\IdeaProjects\\localscript",
+      "env": {
+        "LLM_BACKEND": "openrouter",
+        "OPENROUTER_API_KEY": "your-key-here"
+      }
+    }
+  }
+}

@@ -19,13 +19,15 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "websockets>=14.0",
+    "mcp[cli]>=1.2.0",
 ]
 
 [project.scripts]
 localscript = "main:main"
+localscript-mcp = "mcp_server.server:main"
 
 [tool.setuptools.packages.find]
-include = ["agents*", "graph*", "llm*", "tools*", "config*", "api*"]
+include = ["agents*", "graph*", "llm*", "tools*", "config*", "api*", "mcp_server*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
