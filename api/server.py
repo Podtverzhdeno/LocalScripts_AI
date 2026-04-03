@@ -16,10 +16,11 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-# Load .env early
+# Load .env from project root (not cwd) so it works regardless of launch directory
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    _ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+    load_dotenv(_ENV_FILE)
 except ImportError:
     pass
 

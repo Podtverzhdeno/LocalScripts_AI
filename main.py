@@ -78,7 +78,9 @@ Examples:
         os.environ["LLM_BACKEND"] = args.backend
 
     settings = load_settings()
-    max_iterations = args.max_iterations or settings["pipeline"]["max_iterations"]
+    max_iterations = args.max_iterations or int(os.getenv(
+        "MAX_ITERATIONS", settings["pipeline"]["max_iterations"]
+    ))
 
     # Session directory
     base_dir = args.output or settings["workspace"]["base_dir"]

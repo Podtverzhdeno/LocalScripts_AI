@@ -1,22 +1,19 @@
+# ============================================================
+# Internal defaults. Users should configure via .env instead.
+# Environment variables ALWAYS override these values.
+# ============================================================
+
 llm:
-  backend: openrouter          # openai | ollama | openrouter | anthropic
-  model: openai/gpt-4o-mini       # or llama3.2, codellama, etc.
+  backend: ollama              # fallback if LLM_BACKEND not in .env
+  model: qwen2.5:7b            # fallback if LLM_MODEL not in .env
   temperature: 0.2
   ollama_base_url: http://localhost:11434
 
-# Per-agent LLM overrides (optional).
-# If an agent has no override, it uses the default `llm:` config above.
-# This enables hybrid pipelines: e.g. local model for generation, cloud for review.
+# Per-agent defaults (overridden by GENERATOR_BACKEND, REVIEWER_MODEL, etc. in .env)
 agents:
-  generator:           # writes Lua code
-    # backend: ollama
-    # model: qwen2.5-coder:7b
-  validator:           # explains compilation/runtime errors
-    # backend: ollama
-    # model: qwen2.5-coder:7b
-  reviewer:            # code quality review
-    # backend: openrouter
-    # model: openai/gpt-4o-mini
+  generator: {}
+  validator: {}
+  reviewer: {}
 
 pipeline:
   max_iterations: 3

@@ -55,20 +55,23 @@ def _resolve_config(role: str | None = None) -> tuple[str, str, float]:
     """
     Resolve (backend, model, temperature) for a given agent role.
 
-    Priority chain:
-        1. Environment variables (LLM_BACKEND, LLM_MODEL) — always win
-        2. Per-agent override in settings.yaml → agents.<role>.backend/model
-        3. Default settings.yaml → llm.backend/model
+    Priority chain (highest wins):
+        1. Per-agent env vars: GENERATOR_BACKEND, REVIEWER_MODEL, etc.
+        2. Global env vars: LLM_BACKEND, LLM_MODEL
+        3. Per-agent override in settings.yaml -> agents.<role>
+        4. Default settings.yaml -> llm.backend/model
+
+    Users only need to edit .env — settings.yaml is for internal defaults.
     """
     settings = load_settings()
     default_cfg = settings["llm"]
 
-    # Start with defaults
+    # Layer 4: defaults from settings.yaml
     backend = default_cfg["backend"]
     model = default_cfg["model"]
     temperature = default_cfg.get("temperature", 0.2)
 
-    # Layer 2: per-agent override from settings.yaml
+    # Layer 3: per-agent override from settings.yaml
     if role:
         agent_overrides = settings.get("agents", {}).get(role, {}) or {}
         if agent_overrides.get("backend"):
@@ -78,9 +81,16 @@ def _resolve_config(role: str | None = None) -> tuple[str, str, float]:
         if agent_overrides.get("temperature") is not None:
             temperature = agent_overrides["temperature"]
 
-    # Layer 1: env vars always win (for CLI --backend flag compatibility)
+    # Layer 2: global env vars
     backend = os.getenv("LLM_BACKEND", backend).lower()
     model = os.getenv("LLM_MODEL", model)
+
+    # Layer 1: per-agent env vars (highest priority)
+    # e.g. GENERATOR_BACKEND, GENERATOR_MODEL, REVIEWER_BACKEND, etc.
+    if role:
+        role_upper = role.upper()
+        backend = os.getenv(f"{role_upper}_BACKEND", backend).lower()
+        model = os.getenv(f"{role_upper}_MODEL", model)
 
     return backend, model, temperature
 
