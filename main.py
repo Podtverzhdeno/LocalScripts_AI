@@ -14,10 +14,11 @@ from pathlib import Path
 
 import yaml
 
-# Load .env before anything else so OPENAI_API_KEY etc. are available
+# Load .env from project root (not cwd) so it works regardless of launch directory
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    _ENV_FILE = Path(__file__).resolve().parent / ".env"
+    load_dotenv(_ENV_FILE)
 except ImportError:
     pass  # dotenv optional — env vars can be set directly
 

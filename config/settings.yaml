@@ -4,8 +4,8 @@
 # ============================================================
 
 llm:
-  backend: ollama              # fallback if LLM_BACKEND not in .env
-  model: qwen2.5:7b            # fallback if LLM_MODEL not in .env
+  backend: ollama     1         # fallback if LLM_BACKEND not in .env
+  model: llama3.2              # fallback if LLM_MODEL not in .env (lightweight default)
   temperature: 0.2
   ollama_base_url: http://localhost:11434
 
