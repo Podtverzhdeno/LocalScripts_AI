@@ -4,7 +4,7 @@
 # ============================================================
 
 llm:
-  backend: ollama 1         # fallback if LLM_BACKEND not in .env
+  backend: ollama            # fallback if LLM_BACKEND not in .env
   model: deepseek-r1:8b              # fallback if LLM_MODEL not in .env (lightweight default)
   temperature: 0.2
   ollama_base_url: http://localhost:11434
