@@ -2,14 +2,14 @@
 
 # ⚡ LocalScript
 
-**Автономная агентская система для генерации и валидации Lua-кода**
+**Autonomous multi-agent AI system for generating and validating Lua code**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)](#-тестирование)
-[![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](#-mcp-сервер)
+[![Tests](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)](#-testing)
+[![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](#-mcp-server)
 
-Опишите задачу на естественном языке — получите работающий, проверенный Lua-код.
+Describe a task in plain English — get working, reviewed Lua code.
 
 **CLI** · **Web UI** · **REST API** · **MCP Server**
 
@@ -17,33 +17,33 @@
 
 ---
 
-## Чем отличается от обычного чат-бота
+## What Makes This Different
 
-LocalScript **реально запускает код**. Три AI-агента работают в цикле:
+LocalScript **actually runs your code**. Three AI agents collaborate in a loop:
 
 ```
 ┌──────────┐     ┌───────────┐     ┌──────────┐
 │ Generator│────▶│ Validator  │────▶│ Reviewer  │
-│ пишет Lua│     │ luac + lua │     │ качество  │
+│ write Lua│     │ luac + lua │     │ quality   │
 └──────────┘     └───────────┘     └──────────┘
      ▲                │                  │
-     │    ошибки      │     фидбек       │
+     │    errors      │     feedback     │
      └────────────────┘                  │
      └───────────────────────────────────┘
 ```
 
-- **Generator** — пишет Lua-код по описанию задачи (опционально с reasoning-стратегией)
-- **Validator** — компилирует через `luac` и запускает через `lua` — реальные ошибки, не галлюцинации
-- **Reviewer** — проверяет качество кода, одобряет или запрашивает доработки
-- Цикл повторяется до `max_iterations` раз, каждая попытка сохраняется
+- **Generator** — writes Lua code from task description (optionally with a reasoning strategy)
+- **Validator** — compiles with `luac` and executes with `lua` — real errors, not hallucinated ones
+- **Reviewer** — checks code quality, approves or requests improvements
+- The loop retries up to `max_iterations` times, saving each attempt
 
-Вдохновлён [ChatDev](https://github.com/OpenBMB/ChatDev), но с **реальным выполнением кода** вместо симулированного тестирования.
+Inspired by [ChatDev](https://github.com/OpenBMB/ChatDev), but with **real code execution** instead of simulated testing.
 
 ---
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### 1. Установка
+### 1. Install
 
 ```bash
 git clone https://github.com/Podtverzhdeno/LocalScripts_AI
@@ -51,20 +51,20 @@ cd LocalScripts_AI
 pip install -r requirements.txt
 ```
 
-### 2. Настройка
+### 2. Configure
 
 ```bash
 cp .env.example .env
-# Отредактируйте .env — добавьте API-ключ (см. «LLM-бэкенды» ниже)
+# Edit .env — add your API key (see "LLM Backends" below)
 ```
 
-### 3. Запуск
+### 3. Run
 
 ```bash
 python main.py --task "write a fibonacci function with memoization"
 ```
 
-Вывод:
+Output:
 ```
 ============================================================
   LocalScript — Multi-Agent Lua Generator
@@ -87,92 +87,92 @@ python main.py --task "write a fibonacci function with memoization"
 
 ---
 
-## 🤖 LLM-бэкенды
+## 🤖 LLM Backends
 
-Поддерживается 4 бэкенда. Настройка в `.env`:
+4 backends supported. Configure in `.env`:
 
-| Бэкенд | Конфигурация | API-ключ |
-|--------|-------------|:---:|
-| **OpenRouter** (рекомендуется) | `LLM_BACKEND=openrouter` | ✅ `OPENROUTER_API_KEY` |
+| Backend | Config | API Key |
+|---------|--------|:---:|
+| **OpenRouter** (recommended) | `LLM_BACKEND=openrouter` | ✅ `OPENROUTER_API_KEY` |
 | **OpenAI** | `LLM_BACKEND=openai` | ✅ `OPENAI_API_KEY` |
 | **Anthropic** | `LLM_BACKEND=anthropic` | ✅ `ANTHROPIC_API_KEY` |
-| **Ollama** (локально) | `LLM_BACKEND=ollama` | ❌ Бесплатно |
+| **Ollama** (local) | `LLM_BACKEND=ollama` | ❌ Free |
 
-### Локальный режим (без API-ключа)
+### Local mode (no API key)
 
 ```bash
-# Установите Ollama: https://ollama.ai
+# Install Ollama: https://ollama.ai
 ollama pull qwen2.5-coder:7b
 
 LLM_BACKEND=ollama LLM_MODEL=qwen2.5-coder:7b python main.py --task "write quicksort"
 ```
 
-### Гибридный режим (разные модели для агентов)
+### Hybrid mode (per-agent models)
 
-Каждый агент может использовать свою модель. Настройка в `config/settings.yaml`:
+Each agent can use its own model. Configure in `config/settings.yaml`:
 
 ```yaml
 agents:
   generator:
     backend: ollama
-    model: qwen2.5-coder:7b      # локальная модель для генерации
+    model: qwen2.5-coder:7b      # local model for code generation
   validator:
     backend: ollama
-    model: qwen2.5-coder:7b      # локальная модель для анализа ошибок
+    model: qwen2.5-coder:7b      # local model for error analysis
   reviewer:
     backend: openrouter
-    model: openai/gpt-4o-mini    # облачная модель для ревью
+    model: openai/gpt-4o-mini    # cloud model for code review
 ```
 
-Если для агента нет переопределения, используется дефолтный `llm:` из конфига.
+If no override is set for an agent, the default `llm:` config is used.
 
 ---
 
-## 🧠 Reasoning-стратегии
+## 🧠 Reasoning Strategies
 
-Опциональные **стратегии рассуждения** улучшают качество кода через многошаговое мышление LLM. Стратегия применяется *перед* первой генерацией кода (при ретраях используется прямой вызов для скорости).
+Optional **reasoning strategies** improve code quality through multi-step LLM reasoning. A strategy is applied *before* the first code generation (retries use direct calls for speed).
 
-| Стратегия | LLM-вызовов | Как работает | Лучше всего для |
-|-----------|:-----------:|--------------|-----------------|
-| `none` | 1 | Прямой вызов (по умолчанию, нулевой overhead) | Быстрая итерация, малые модели |
-| `reflect` | 3 | Генерация → самокритика → ревизия | Ловля багов до валидации |
-| `cot` | 2 | Пошаговое рассуждение → генерация кода | Алгоритмические задачи, сложная логика |
+| Strategy | LLM Calls | How It Works | Best For |
+|----------|:---------:|--------------|----------|
+| `none` | 1 | Direct call (default, zero overhead) | Fast iteration, small models |
+| `reflect` | 3 | Generate → self-critique → revise | Catching bugs before validation |
+| `cot` | 2 | Reason step-by-step → generate code | Algorithmic tasks, complex logic |
 
-### Как включить
+### How to enable
 
-В `config/settings.yaml`:
+In `config/settings.yaml`:
 
 ```yaml
 strategy:
-  generator: reflect    # или "cot", "none"
+  generator: reflect    # or "cot", "none"
 ```
 
-Или через переменную окружения:
+Or via environment variable:
 
 ```bash
 GENERATOR_STRATEGY=reflect python main.py --task "write a binary search tree"
 ```
 
-### Как это работает
+### How it works
 
-**`reflect`** (3 вызова LLM):
+**`reflect`** (3 LLM calls):
 ```
-Задача → [LLM: напиши код] → черновик
-       → [LLM: найди баги]  → критика
-       → [LLM: исправь]     → финальный код → в Validator
-```
-
-**`cot`** (2 вызова LLM):
-```
-Задача → [LLM: продумай алгоритм, структуры, edge cases] → план
-       → [LLM: напиши код по плану]                       → код → в Validator
+Task → [LLM: write code]      → draft
+     → [LLM: find bugs]       → critique
+     → [LLM: fix issues]      → final code → to Validator
 ```
 
-> **Совет**: На бесплатных API с rate limits используйте `none`. На локальном Ollama с моделями 30B+ стратегия `reflect` даёт наибольший прирост качества.
+**`cot`** (2 LLM calls):
+```
+Task → [LLM: plan algorithm, structures, edge cases] → plan
+     → [LLM: write code from plan]                   → code → to Validator
+```
+
+> **Tip**: On free-tier APIs with rate limits, use `none`. On local Ollama with 30B+ models, `reflect` gives the best quality improvement.
 
 ---
 
-## 🖥️ Интерфейсы
+## 🖥️ Interfaces
 
 ### CLI
 
@@ -186,15 +186,15 @@ python main.py --task "sort a table" --backend ollama --max-iterations 5
 
 ```bash
 python api/server.py
-# Откройте http://127.0.0.1:8000
+# Open http://127.0.0.1:8000
 ```
 
-Возможности:
-- Ввод задачи с live-обновлениями статуса
-- Браузер сессий с историей итераций
-- Просмотр файлов с подсветкой синтаксиса
-- WebSocket для прогресса в реальном времени
-- Отображение финального Lua-кода
+Features:
+- Task input with live status updates
+- Session browser with iteration history
+- File viewer with syntax highlighting
+- WebSocket real-time progress
+- Final Lua code display
 
 ### REST API
 
@@ -202,42 +202,42 @@ python api/server.py
 python api/server.py
 ```
 
-| Метод | Эндпоинт | Описание |
-|-------|----------|----------|
-| `POST` | `/api/run-task` | Запуск pipeline, возвращает `session_id` |
-| `GET` | `/api/session/{id}` | Статус сессии, итерация, ошибки |
-| `GET` | `/api/sessions` | Список всех сессий |
-| `GET` | `/api/session/{id}/files` | Файлы в папке сессии |
-| `GET` | `/api/session/{id}/final` | Финальный Lua-код |
-| `WS` | `/api/ws/{id}` | Live WebSocket обновления |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/run-task` | Start pipeline, returns `session_id` |
+| `GET` | `/api/session/{id}` | Session status, iteration, errors |
+| `GET` | `/api/sessions` | List all sessions |
+| `GET` | `/api/session/{id}/files` | Files in session folder |
+| `GET` | `/api/session/{id}/final` | Final Lua code |
+| `WS` | `/api/ws/{id}` | Live WebSocket updates |
 
-### 🔌 MCP-сервер
+### 🔌 MCP Server
 
-LocalScript — это [Model Context Protocol](https://modelcontextprotocol.io/) сервер. Любой MCP-совместимый AI-клиент может использовать его как инструмент.
+LocalScript is a [Model Context Protocol](https://modelcontextprotocol.io/) server. Any MCP-compatible AI client can use it as a tool.
 
 ```bash
 pip install "mcp[cli]>=1.2.0"
 python mcp_server/server.py
 ```
 
-**Инструменты** (AI-клиенты вызывают наш pipeline):
+**Tools** (AI clients call our pipeline):
 
-| Инструмент | Описание |
-|------------|----------|
-| `generate_lua(task)` | Полный pipeline: генерация → валидация → ревью → код |
-| `validate_lua(code)` | Проверка Lua-кода через `luac` + `lua` |
-| `review_lua(code, task)` | AI-ревью кода |
-| `fix_lua(code, errors)` | Исправление кода по сообщениям об ошибках |
+| Tool | Description |
+|------|-------------|
+| `generate_lua(task)` | Full pipeline: generate → validate → review → return code |
+| `validate_lua(code)` | Check Lua code with `luac` + `lua` |
+| `review_lua(code, task)` | AI code review |
+| `fix_lua(code, errors)` | Fix broken code given error messages |
 
-**Ресурсы** (AI-клиенты читают наши данные):
+**Resources** (AI clients read our data):
 
-| Ресурс | Описание |
-|--------|----------|
-| `sessions://list` | Все сессии workspace |
-| `session://{id}/status` | Статус сессии + отчёт |
-| `session://{id}/final.lua` | Сгенерированный Lua-код |
+| Resource | Description |
+|----------|-------------|
+| `sessions://list` | All workspace sessions |
+| `session://{id}/status` | Session status + report |
+| `session://{id}/final.lua` | Generated Lua code |
 
-**Подключение к Claude Desktop** — добавьте в `claude_desktop_config.json`:
+**Connect to Claude Desktop** — add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -250,9 +250,9 @@ python mcp_server/server.py
 }
 ```
 
-Также работает с: **Cursor**, **VS Code Copilot**, **Continue.dev**, **Cline**, **Windsurf**, **Zed**.
+Also works with: **Cursor**, **VS Code Copilot**, **Continue.dev**, **Cline**, **Windsurf**, **Zed**.
 
-LocalScript может **использовать внешние MCP-инструменты** — настройка в `settings.yaml`:
+LocalScript can also **use external MCP tools** — configure in `settings.yaml`:
 ```yaml
 mcp_tools:
   - name: filesystem
@@ -262,72 +262,72 @@ mcp_tools:
 
 ---
 
-## 📁 Вывод сессии
+## 📁 Session Output
 
-Каждый запуск создаёт сессию с таймстампом:
+Every run creates a timestamped session:
 
 ```
 workspace/session_20260403_143022/
-├── task.txt                 # описание задачи
-├── iteration_1.lua          # первая попытка
-├── iteration_1_errors.txt   # ошибки (если есть)
-├── iteration_2.lua          # вторая попытка (если ретрай)
-├── final.lua                # ✅ одобренный код
-└── report.md                # отчёт ревьюера
+├── task.txt                 # original task description
+├── iteration_1.lua          # first attempt
+├── iteration_1_errors.txt   # errors (if any)
+├── iteration_2.lua          # second attempt (if retry)
+├── final.lua                # ✅ approved code
+└── report.md                # reviewer summary
 ```
 
 ---
 
-## 📂 Структура проекта
+## 📂 Project Structure
 
 ```
 localscript/
-├── agents/                  # AI-агенты
-│   ├── base.py              # BaseAgent: промпты, LLM-вызовы, стратегии, стоп-сигнал
-│   ├── generator.py         # Пишет Lua-код, стратегия на первой попытке
-│   ├── validator.py         # Запускает luac+lua, объясняет ошибки через LLM
-│   └── reviewer.py          # Ревью кода, одобрение через <INFO> Finished
-├── strategies/              # Reasoning-стратегии (опционально)
+├── agents/                  # AI agents
+│   ├── base.py              # BaseAgent: prompts, LLM calls, strategies, stop signal
+│   ├── generator.py         # Writes Lua code, uses strategy on first attempt
+│   ├── validator.py         # Runs luac+lua, explains errors via LLM
+│   └── reviewer.py          # Code review, <INFO> Finished approval
+├── strategies/              # Reasoning strategies (optional)
 │   ├── base.py              # ReasoningStrategy ABC + PassthroughStrategy
-│   ├── reflect.py           # Генерация → самокритика → ревизия
-│   ├── cot.py               # Chain-of-thought: рассуждение → код
-│   └── registry.py          # Реестр стратегий + фабрика
+│   ├── reflect.py           # Generate → self-critique → revise
+│   ├── cot.py               # Chain-of-thought: reason, then code
+│   └── registry.py          # Strategy registry + factory
 ├── graph/                   # LangGraph pipeline
 │   ├── state.py             # AgentState TypedDict
-│   ├── nodes.py             # Функции нод с инъекцией LLM
-│   └── pipeline.py          # Сборка StateGraph, run_pipeline()
-├── llm/                     # Провайдеры LLM
-│   ├── factory.py           # get_llm(role) — выбор модели по агенту
+│   ├── nodes.py             # Node functions with per-agent LLM injection
+│   └── pipeline.py          # StateGraph assembly, run_pipeline()
+├── llm/                     # LLM backend providers
+│   ├── factory.py           # get_llm(role) — per-agent model selection
 │   ├── openai_provider.py
 │   ├── openrouter_provider.py
 │   ├── anthropic_provider.py
 │   └── ollama_provider.py
 ├── tools/
-│   └── lua_runner.py        # LuaRunner: компиляция, выполнение, таймаут
-├── api/                     # FastAPI веб-сервер
-│   ├── server.py            # Фабрика приложения, статика, точка входа
-│   ├── routes.py            # REST + WebSocket эндпоинты
-│   └── models.py            # Pydantic-схемы запросов/ответов
-├── mcp_server/              # MCP-сервер
-│   ├── server.py            # Инструменты + Ресурсы + MCP-клиент
+│   └── lua_runner.py        # LuaRunner: compile, execute, timeout
+├── api/                     # FastAPI web server
+│   ├── server.py            # App factory, static files, entry point
+│   ├── routes.py            # REST + WebSocket endpoints
+│   └── models.py            # Pydantic request/response schemas
+├── mcp_server/              # MCP server
+│   ├── server.py            # Tools + Resources + MCP client
 │   └── claude_desktop_config.json
 ├── frontend/                # Web UI
-│   ├── index.html           # Дашборд — ввод задачи, список сессий
-│   ├── session.html         # Просмотр сессии — статус, файлы, код
-│   └── app.js               # Общие утилиты
+│   ├── index.html           # Dashboard — task input, session list
+│   ├── session.html         # Session viewer — status, files, code
+│   └── app.js               # Shared utilities
 ├── config/
-│   ├── settings.yaml        # Бэкенд, модели, таймауты, стратегии, MCP
-│   └── agents.yaml          # Системные промпты для каждого агента
-├── tests/                   # 48 тестов
-├── examples/                # Примеры задач
-├── main.py                  # CLI точка входа
-├── Makefile                 # Шорткаты
-└── docs/architecture.md     # Подробная документация архитектуры
+│   ├── settings.yaml        # Backend, models, timeouts, strategies, MCP tools
+│   └── agents.yaml          # System prompts for each agent
+├── tests/                   # 48 tests
+├── examples/                # Example task files
+├── main.py                  # CLI entry point
+├── Makefile                 # Shortcuts
+└── docs/architecture.md     # Detailed architecture docs
 ```
 
 ---
 
-## ⚙️ Конфигурация
+## ⚙️ Configuration
 
 ### `config/settings.yaml`
 
@@ -337,17 +337,17 @@ llm:
   model: openai/gpt-4o-mini
   temperature: 0.2
 
-agents:                         # переопределения по агентам (опционально)
+agents:                         # per-agent overrides (optional)
   generator:
     # backend: ollama
     # model: qwen2.5-coder:7b
 
-strategy:                       # reasoning-стратегии (опционально)
+strategy:                       # reasoning strategies (optional)
   generator: none               # "none" | "reflect" | "cot"
 
 pipeline:
   max_iterations: 3
-  execution_timeout: 10         # секунды на выполнение lua
+  execution_timeout: 10         # seconds for lua execution
 
 workspace:
   base_dir: workspace
@@ -355,18 +355,18 @@ workspace:
 
 ### `config/agents.yaml`
 
-Системные промпты для каждого агента. Ключевые ограничения:
-- **Generator**: выводит только чистый Lua (без markdown), стандартный Lua 5.3+ (без внешних фреймворков)
-- **Validator**: различает реальные баги и намеренную обработку ошибок
-- **Reviewer**: проверяет корректность, автономность выполнения, Lua-идиомы
+System prompts for each agent. Key constraints:
+- **Generator**: outputs raw Lua only (no markdown), standard Lua 5.3+ (no external frameworks)
+- **Validator**: distinguishes real bugs from intentional error handling
+- **Reviewer**: checks correctness, standalone execution, Lua idioms
 
 ### `.env`
 
-API-ключи и переопределения бэкенда. См. `.env.example` для всех опций.
+API keys and backend overrides. See `.env.example` for all options.
 
 ---
 
-## 🧪 Тестирование
+## 🧪 Testing
 
 ```bash
 pytest tests/ -v
@@ -375,70 +375,70 @@ pytest tests/ -v
 ```
 tests/test_agents.py      15 passed  — generator, validator, reviewer, strip_code_fences
 tests/test_lua_runner.py    9 passed  — compile, execute, timeout, error files
-tests/test_pipeline.py      9 passed  — conditional edges, end-to-end с mock LLM
-tests/test_strategies.py  15 passed  — reflect, cot, registry, интеграция с агентами
+tests/test_pipeline.py      9 passed  — conditional edges, end-to-end with mock LLM
+tests/test_strategies.py  15 passed  — reflect, cot, registry, agent integration
 ────────────────────────────────────
                            48 passed ✅
 ```
 
-Все тесты используют mock LLM — API-ключи не нужны.
+All tests use mock LLMs — no API keys needed.
 
 ---
 
 ## 🛠️ Makefile
 
 ```bash
-make run                    # запуск с дефолтной задачей
-make task TASK="sort table" # запуск с кастомной задачей
-make local                  # запуск с Ollama (без API-ключа)
-make test                   # запуск всех тестов
-make clean                  # удаление сессий workspace
-make graph                  # вывод mermaid-диаграммы графа
+make run                    # run with default task
+make task TASK="sort table" # run with custom task
+make local                  # run with Ollama (no API key)
+make test                   # run all tests
+make clean                  # remove workspace sessions
+make graph                  # print mermaid graph diagram
 ```
 
 ---
 
-## 📋 Требования
+## 📋 Requirements
 
 - **Python** 3.11+
-- **Lua** 5.3+ с `luac` (`apt install lua5.4` / `brew install lua` / `scoop install lua`)
-- **API-ключ** для OpenRouter/OpenAI/Anthropic, **или** [Ollama](https://ollama.ai) для локального режима
+- **Lua** 5.3+ with `luac` (`apt install lua5.4` / `brew install lua` / `scoop install lua`)
+- **API key** for OpenRouter/OpenAI/Anthropic, **or** [Ollama](https://ollama.ai) for local mode
 
 ---
 
-## 🏗️ Архитектура
+## 🏗️ Architecture
 
 ```
 START
   │
   ▼
 [generate] ──────────────────────────────┐
-  │  (стратегия: reflect/cot/none)       │ (ошибки + бюджет ретраев)
+  │  (strategy: reflect/cot/none)        │ (errors + retry budget left)
   ▼                                       │
-[validate] ──── ошибки? ─────────────────┘
+[validate] ──── errors? ─────────────────┘
   │
-  │ код OK
+  │ code OK
   ▼
-[review] ──── нужны доработки? ──────────┐
+[review] ──── needs improvements? ───────┐
   │                                       │
-  │ <INFO> Finished                       │ (повторная генерация с фидбеком)
+  │ <INFO> Finished                       │ (re-enter generate with feedback)
   ▼                                       │
  END ◄────────────────────────────────────┘
   ▲
-  │ (max_iterations достигнут)
+  │ (max_iterations reached)
 [fail] ──────────────────────────────────►END
 ```
 
-Подробнее: [docs/architecture.md](docs/architecture.md)
+See [docs/architecture.md](docs/architecture.md) for full details.
 
 ---
 
-## 📄 Лицензия
+## 📄 License
 
 MIT
 
 ---
 
 <div align="center">
-<sub>Построен на <a href="https://github.com/langchain-ai/langgraph">LangGraph</a> · Вдохновлён <a href="https://github.com/OpenBMB/ChatDev">ChatDev</a></sub>
+<sub>Built with <a href="https://github.com/langchain-ai/langgraph">LangGraph</a> · Inspired by <a href="https://github.com/OpenBMB/ChatDev">ChatDev</a></sub>
 </div>
