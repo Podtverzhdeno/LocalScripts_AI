@@ -2,6 +2,10 @@
 Lua code execution tool.
 Runs luac (compile check) and lua (execute) in a sandboxed subprocess.
 Writes each iteration to the session workspace directory.
+
+Sandbox mode (enabled by default) blocks dangerous system calls:
+  os.execute, io.popen, loadfile, dofile, require, debug, etc.
+  See tools/sandbox.py for the full list.
 """
 
 import os
@@ -9,6 +13,8 @@ import subprocess
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+
+from tools.sandbox import wrap_in_sandbox
 
 # luac -o needs a null device; /dev/null doesn't exist on Windows
 _NULL_DEVICE = "NUL" if os.name == "nt" else "/dev/null"
@@ -57,10 +63,11 @@ class LuaRunner:
     Inspired by ChatDev's uv_run tool with timeout support.
     """
 
-    def __init__(self, session_dir: str | Path, timeout: int = 10):
+    def __init__(self, session_dir: str | Path, timeout: int = 10, sandbox: bool = True):
         self.session_dir = Path(session_dir)
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
+        self.sandbox = sandbox
         self._check_lua_installed()
 
     def _check_lua_installed(self) -> None:
@@ -132,20 +139,24 @@ class LuaRunner:
         )
 
     def execute(self, code: str, iteration: int) -> LuaResult:
-        """Compile + execute Lua code with timeout."""
+        """Compile + execute Lua code with timeout. Sandbox enabled by default."""
         lua_file = self.save_iteration(code, iteration)
 
-        # Step 1: compile
+        # Step 1: compile (original code, no sandbox — sandbox preamble is valid Lua)
         compile_result = self.compile(code, iteration)
         if not compile_result.success:
             err_path = self.session_dir / f"iteration_{iteration}_errors.txt"
             err_path.write_text(compile_result.errors, encoding="utf-8")
             return compile_result
 
-        # Step 2: execute
+        # Step 2: wrap in sandbox and execute
+        exec_code = wrap_in_sandbox(code) if self.sandbox else code
+        exec_file = self.session_dir / f"iteration_{iteration}_sandboxed.lua"
+        exec_file.write_text(exec_code, encoding="utf-8")
+
         try:
             result = subprocess.run(
-                [self._get_lua_binary(), str(lua_file)],
+                [self._get_lua_binary(), str(exec_file)],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,

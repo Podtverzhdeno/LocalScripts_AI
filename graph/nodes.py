@@ -13,8 +13,10 @@ from config.loader import load_settings
 
 def _get_runner(state: AgentState) -> LuaRunner:
     settings = load_settings()
-    timeout = settings["pipeline"].get("execution_timeout", 10)
-    return LuaRunner(session_dir=state["session_dir"], timeout=timeout)
+    pipeline_cfg = settings["pipeline"]
+    timeout = pipeline_cfg.get("execution_timeout", 10)
+    sandbox = pipeline_cfg.get("sandbox", True)
+    return LuaRunner(session_dir=state["session_dir"], timeout=timeout, sandbox=sandbox)
 
 
 def make_nodes(

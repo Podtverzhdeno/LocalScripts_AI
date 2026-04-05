@@ -6,7 +6,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-66%20passed-brightgreen.svg)](#-testing)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](#-mcp-server)
 
 Describe a task in plain English — get working, reviewed Lua code.
@@ -172,6 +172,25 @@ Task → [LLM: plan algorithm, structures, edge cases] → plan
 
 ---
 
+## 🔒 Sandbox
+
+Generated Lua code runs in a **sandbox** that blocks dangerous system calls. Enabled by default.
+
+| Blocked | Allowed |
+|---------|--------|
+| `os.execute`, `os.remove`, `os.rename`, `os.exit` | `os.clock`, `os.date`, `os.time` |
+| `io.popen`, `io.open` | `io.read`, `io.write`, `io.stdout` |
+| `require`, `loadfile`, `dofile`, `package` | `print`, `type`, `tostring`, `pcall` |
+| `debug.*`, `rawset` | `string.*`, `table.*`, `math.*`, `coroutine.*` |
+
+Disable in `config/settings.yaml` if needed:
+```yaml
+pipeline:
+  sandbox: false    # ⚠️ not recommended — allows arbitrary system access
+```
+
+---
+
 ## 🖥️ Interfaces
 
 ### CLI
@@ -310,7 +329,8 @@ localscript/
 │   ├── anthropic_provider.py
 │   └── ollama_provider.py
 ├── tools/
-│   └── lua_runner.py        # LuaRunner: compile, execute, timeout
+│   ├── lua_runner.py        # LuaRunner: compile, execute, timeout, sandbox
+│   └── sandbox.py           # Lua sandbox: blocks os.execute, io.popen, require, debug
 ├── api/                     # FastAPI web server
 │   ├── server.py            # App factory, static files, entry point
 │   ├── routes.py            # REST + WebSocket endpoints
@@ -325,7 +345,7 @@ localscript/
 ├── config/
 │   ├── settings.yaml        # Backend, models, timeouts, strategies, MCP tools
 │   └── agents.yaml          # System prompts for each agent
-├── tests/                   # 48 tests
+├── tests/                   # 66 tests
 ├── examples/                # Example task files
 ├── main.py                  # CLI entry point
 ├── Makefile                 # Shortcuts
@@ -355,6 +375,7 @@ strategy:                       # reasoning strategies (optional)
 pipeline:
   max_iterations: 3
   execution_timeout: 10         # seconds for lua execution
+  sandbox: true                 # block os.execute, io.popen, require, debug
 
 workspace:
   base_dir: workspace
@@ -384,8 +405,9 @@ tests/test_agents.py      15 passed  — generator, validator, reviewer, strip_c
 tests/test_lua_runner.py    9 passed  — compile, execute, timeout, error files
 tests/test_pipeline.py      9 passed  — conditional edges, end-to-end with mock LLM
 tests/test_strategies.py  15 passed  — reflect, cot, registry, agent integration
+tests/test_sandbox.py     18 passed  — blocked calls, safe functions, sandbox toggle
 ────────────────────────────────────
-                           48 passed ✅
+                           66 passed ✅
 ```
 
 All tests use mock LLMs — no API keys needed.

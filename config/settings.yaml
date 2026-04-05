@@ -26,6 +26,7 @@ strategy:
 pipeline:
   max_iterations: 3
   execution_timeout: 10    # seconds for lua execution
+  sandbox: true            # block os.execute, io.popen, require, debug, etc.
 
 workspace:
   base_dir: workspace
