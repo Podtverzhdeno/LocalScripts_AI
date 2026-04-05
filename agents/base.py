@@ -1,13 +1,17 @@
 """
 BaseAgent — shared logic for all LocalScript agents.
 Implements ChatDev-inspired <INFO> Finished stop signal pattern.
+Supports optional reasoning strategies (reflect, cot) for enhanced output.
 """
 
+import logging
 import re
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.language_models import BaseChatModel
-from config.loader import get_agent_prompt
+from config.loader import get_agent_prompt, get_strategy_name
+
+logger = logging.getLogger("localscript.agents")
 
 
 STOP_SIGNAL = "<INFO> Finished"
@@ -37,6 +41,22 @@ class BaseAgent:
         ]
         response = self.llm.invoke(messages)
         return response.content.strip()
+
+    def invoke_with_strategy(self, user_message: str) -> str:
+        """
+        Send a message through the configured reasoning strategy.
+
+        If strategy is "none" (default), behaves identically to invoke().
+        Otherwise, the strategy wraps the LLM call with multi-step reasoning.
+        """
+        strategy_name = get_strategy_name(self.role)
+        if strategy_name == "none":
+            return self.invoke(user_message)
+
+        from strategies.registry import get_strategy
+        strategy = get_strategy(strategy_name, self.llm)
+        logger.info("[%s] Using strategy: %s", self.role, strategy_name)
+        return strategy.run(user_message, context={"role": self.role})
 
     @staticmethod
     def strip_code_fences(text: str) -> str:

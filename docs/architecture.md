@@ -54,8 +54,8 @@ START
 
 | File           | Role                                                                 |
 |----------------|----------------------------------------------------------------------|
-| `base.py`      | `BaseAgent`: loads system prompt from YAML, wraps LLM, stop signal  |
-| `generator.py` | Writes Lua code; on retry, receives error/review context             |
+| `base.py`      | `BaseAgent`: loads system prompt from YAML, wraps LLM, strategies, stop signal |
+| `generator.py` | Writes Lua code; uses reasoning strategy on first attempt, direct call on retries |
 | `validator.py` | Runs `luac`+`lua`; uses LLM to explain errors in plain language      |
 | `reviewer.py`  | Quality review; emits `<INFO> Finished` to approve or requests fixes |
 
@@ -72,6 +72,15 @@ START
 | File           | Role                                                         |
 |----------------|--------------------------------------------------------------|
 | `lua_runner.py`| `LuaRunner`: compile with `luac`, execute with `lua`, timeout, save iterations to workspace |
+
+### `strategies/`
+
+| File           | Role                                                         |
+|----------------|--------------------------------------------------------------|
+| `base.py`      | `ReasoningStrategy` ABC + `PassthroughStrategy` (no-op)     |
+| `reflect.py`   | Self-reflection: draft → critique → revise (3 LLM calls)    |
+| `cot.py`       | Chain-of-thought: reason step-by-step, then code (2 calls)  |
+| `registry.py`  | Strategy registry, `get_strategy(name, llm)` factory        |
 
 ### `llm/`
 

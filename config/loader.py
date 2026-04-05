@@ -31,3 +31,17 @@ def get_agent_prompt(role: str) -> str:
     cfg = load_agent_config()
     agent = cfg.get(role, {})
     return agent.get("system_prompt", f"You are a {role} agent.")
+
+
+def get_strategy_name(role: str) -> str:
+    """
+    Return the reasoning strategy name for a given agent role.
+
+    Priority: GENERATOR_STRATEGY env var > settings.yaml > "none".
+    """
+    import os
+    settings = load_settings()
+    strategy_cfg = settings.get("strategy", {})
+    default = strategy_cfg.get(role, "none")
+    env_key = f"{role.upper()}_STRATEGY"
+    return os.getenv(env_key, default)

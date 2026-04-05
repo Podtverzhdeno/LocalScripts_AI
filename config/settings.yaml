@@ -4,8 +4,8 @@
 # ============================================================
 
 llm:
-  backend: ollama     1         # fallback if LLM_BACKEND not in .env
-  model: llama3.2              # fallback if LLM_MODEL not in .env (lightweight default)
+  backend: ollama 1         # fallback if LLM_BACKEND not in .env
+  model: deepseek-r1:8b              # fallback if LLM_MODEL not in .env (lightweight default)
   temperature: 0.2
   ollama_base_url: http://localhost:11434
 
@@ -14,6 +14,14 @@ agents:
   generator: {}
   validator: {}
   reviewer: {}
+
+# Reasoning strategies — enhance agent output quality via multi-step LLM reasoning.
+# Applied to the generator agent before producing code.
+# Set to "none" for direct LLM calls (zero overhead, default).
+# Available: none, reflect (3 calls), cot (2 calls)
+strategy:
+  generator: none          # "none" | "reflect" | "cot"
+  # reviewer: none         # future: strategies for reviewer agent
 
 pipeline:
   max_iterations: 3

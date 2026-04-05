@@ -27,7 +27,7 @@ localscript = "main:main"
 localscript-mcp = "mcp_server.server:main"
 
 [tool.setuptools.packages.find]
-include = ["agents*", "graph*", "llm*", "tools*", "config*", "api*", "mcp_server*"]
+include = ["agents*", "graph*", "llm*", "tools*", "config*", "api*", "mcp_server*", "strategies*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
