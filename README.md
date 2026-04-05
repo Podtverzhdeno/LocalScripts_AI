@@ -252,12 +252,19 @@ python mcp_server/server.py
 
 Also works with: **Cursor**, **VS Code Copilot**, **Continue.dev**, **Cline**, **Windsurf**, **Zed**.
 
-LocalScript can also **use external MCP tools** — configure in `settings.yaml`:
+LocalScript can also **use external MCP tools** via [langchain-mcp-adapters](https://github.com/langchain-ai/langchain-mcp-adapters) — configure in `settings.yaml`:
 ```yaml
 mcp_tools:
+  # Stdio transport (launches subprocess)
   - name: filesystem
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
+    transport: stdio
+
+  # HTTP transport (connects to running server)
+  - name: remote_tools
+    url: "http://localhost:8000/mcp"
+    transport: http
 ```
 
 ---

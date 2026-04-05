@@ -278,90 +278,83 @@ async def get_final_lua(session_id: str) -> str:
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PART B: MCP Client — LocalScript USES external MCP tools
+#  Powered by langchain-mcp-adapters (official LangChain ↔ MCP bridge)
 # ══════════════════════════════════════════════════════════════════════════════
 
 # External MCP tools are configured in config/settings.yaml under `mcp_tools:`.
 # The pipeline agents can call these tools during generation.
-# This is implemented as a LangChain tool wrapper that connects to external MCP servers.
 
-async def _get_external_mcp_tools() -> list:
+def _build_mcp_server_configs() -> dict:
     """
-    Load external MCP tool configurations from settings.yaml.
-    Returns LangChain-compatible tool wrappers for each configured MCP server.
+    Convert settings.yaml mcp_tools list into MultiServerMCPClient config dict.
 
     Config example in settings.yaml:
         mcp_tools:
           - name: filesystem
             command: npx
-            args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
-          - name: web_search
-            command: npx
-            args: ["-y", "@anthropic/mcp-server-brave-search"]
-            env:
-              BRAVE_API_KEY: "..."
+            args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
+          - name: weather
+            url: "http://localhost:8000/mcp"
+            transport: http
     """
     from config.loader import load_settings
     settings = load_settings()
     mcp_configs = settings.get("mcp_tools", [])
 
     if not mcp_configs:
+        return {}
+
+    server_dict = {}
+    for cfg in mcp_configs:
+        name = cfg.get("name", "unknown")
+        transport = cfg.get("transport", "stdio")
+
+        if transport == "stdio":
+            server_dict[name] = {
+                "command": cfg["command"],
+                "args": cfg.get("args", []),
+                "transport": "stdio",
+            }
+            # Pass env vars if configured
+            if cfg.get("env"):
+                server_dict[name]["env"] = cfg["env"]
+        elif transport == "http":
+            server_dict[name] = {
+                "url": cfg["url"],
+                "transport": "http",
+            }
+        else:
+            logger.warning("Unknown MCP transport '%s' for server '%s'", transport, name)
+
+    return server_dict
+
+
+async def _get_external_mcp_tools() -> list:
+    """
+    Load external MCP tools via langchain-mcp-adapters MultiServerMCPClient.
+    Returns LangChain-compatible tools for each configured MCP server.
+    """
+    server_configs = _build_mcp_server_configs()
+    if not server_configs:
         return []
 
-    tools = []
-    for cfg in mcp_configs:
-        try:
-            tool = await _connect_mcp_tool(cfg)
-            if tool:
-                tools.extend(tool)
-                logger.info("Loaded MCP tools from: %s", cfg.get("name", "unknown"))
-        except Exception as e:
-            logger.warning("Failed to load MCP tool '%s': %s", cfg.get("name", "?"), e)
-
-    return tools
-
-
-async def _connect_mcp_tool(config: dict) -> list | None:
-    """Connect to a single external MCP server and return its tools as LangChain tools."""
     try:
-        from mcp import ClientSession, StdioServerParameters
-        from mcp.client.stdio import stdio_client
+        from langchain_mcp_adapters.client import MultiServerMCPClient
     except ImportError:
-        logger.warning("MCP client SDK not available — install with: pip install 'mcp[cli]'")
-        return None
+        logger.warning(
+            "langchain-mcp-adapters not installed — "
+            "install with: pip install langchain-mcp-adapters"
+        )
+        return []
 
-    name = config.get("name", "unknown")
-    command = config["command"]
-    args = config.get("args", [])
-    env = config.get("env", {})
-
-    server_params = StdioServerParameters(command=command, args=args, env=env)
-
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            mcp_tools = await session.list_tools()
-
-            # Convert MCP tools to simple callable wrappers
-            langchain_tools = []
-            for tool in mcp_tools.tools:
-                langchain_tools.append(_make_langchain_tool(name, tool, session))
-
-            return langchain_tools
-
-
-def _make_langchain_tool(server_name: str, mcp_tool, session):
-    """Wrap an MCP tool as a simple callable for use in agents."""
-    from langchain_core.tools import StructuredTool
-
-    async def _call(**kwargs):
-        result = await session.call_tool(mcp_tool.name, arguments=kwargs)
-        return result.content[0].text if result.content else ""
-
-    return StructuredTool.from_function(
-        func=lambda **kw: asyncio.run(_call(**kw)),
-        name=f"{server_name}__{mcp_tool.name}",
-        description=mcp_tool.description or f"MCP tool: {mcp_tool.name}",
-    )
+    try:
+        client = MultiServerMCPClient(server_configs)
+        tools = await client.get_tools()
+        logger.info("Loaded %d MCP tools from %d server(s)", len(tools), len(server_configs))
+        return tools
+    except Exception as e:
+        logger.warning("Failed to load external MCP tools: %s", e)
+        return []
 
 
 # ══════════════════════════════════════════════════════════════════════════════

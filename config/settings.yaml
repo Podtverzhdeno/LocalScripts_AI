@@ -31,14 +31,23 @@ workspace:
   base_dir: workspace
 
 # External MCP tools that agents can use during generation (optional).
-# Each entry connects to an external MCP server via stdio.
-# Uncomment and configure as needed.
+# Powered by langchain-mcp-adapters (official LangChain <-> MCP bridge).
+# Supports stdio and http transports. Uncomment and configure as needed.
 mcp_tools: []
+  # Stdio transport (default) — launches a subprocess:
   # - name: filesystem
   #   command: npx
   #   args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
+  #   transport: stdio
+  #
   # - name: web_search
   #   command: npx
   #   args: ["-y", "@anthropic/mcp-server-brave-search"]
+  #   transport: stdio
   #   env:
   #     BRAVE_API_KEY: "your-key-here"
+  #
+  # HTTP transport — connects to a running MCP server:
+  # - name: remote_tools
+  #   url: "http://localhost:8000/mcp"
+  #   transport: http
