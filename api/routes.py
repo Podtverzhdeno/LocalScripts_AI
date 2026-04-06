@@ -327,7 +327,9 @@ async def list_sessions():
         return []
 
     items: list[SessionListItem] = []
-    for entry in sorted(workspace.iterdir(), reverse=True):
+    # Sort by modification time (newest first) instead of name
+    entries = sorted(workspace.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+    for entry in entries:
         if not entry.is_dir():
             continue
         # Include both session_* and project_* directories
@@ -344,9 +346,19 @@ async def list_sessions():
         else:
             task = None
 
-        # For project mode, check if README.md exists (indicates completion)
+        # For project mode, check multiple completion indicators
         # For quick mode, check final.lua
-        has_final = (entry / "final.lua").exists() or (entry / "README.md").exists()
+        is_project = entry.name.startswith("project_")
+        if is_project:
+            # Project is complete if it has README.md, manifest.json, or any files in src/
+            has_final = (
+                (entry / "README.md").exists() or
+                (entry / "manifest.json").exists() or
+                any((entry / "src").glob("*.lua")) if (entry / "src").exists() else False
+            )
+        else:
+            has_final = (entry / "final.lua").exists()
+
         items.append(SessionListItem(session_id=entry.name, task=task, has_final=has_final))
 
     return items

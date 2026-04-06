@@ -41,6 +41,7 @@ function formatBytes(bytes) {
 let currentMode = 'quick';
 
 function switchMode(mode) {
+    console.log('switchMode called with mode:', mode);
     currentMode = mode;
 
     const quickBtn = document.getElementById('quickModeBtn');
@@ -50,6 +51,8 @@ function switchMode(mode) {
     const modeDescription = document.getElementById('modeDescription');
     const quickModeInfo = document.getElementById('quickModeInfo');
     const projectModeInfo = document.getElementById('projectModeInfo');
+
+    console.log('Elements found:', {quickBtn, projectBtn, quickInput, projectInput});
 
     if (mode === 'quick') {
         quickBtn.classList.add('mode-btn-active');
