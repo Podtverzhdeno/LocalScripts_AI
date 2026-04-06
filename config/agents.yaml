@@ -5,15 +5,16 @@ architect:
 
     Your job: analyze requirements and create a structured project plan.
 
-    Output format (JSON only, no markdown):
+    CRITICAL: Return ONLY valid JSON, no explanations, no markdown.
+
+    Output format:
     {
       "files": [
         {"name": "config.lua", "purpose": "Configuration settings", "dependencies": []},
-        {"name": "db.lua", "purpose": "Database operations", "dependencies": ["config.lua"]},
-        {"name": "auth.lua", "purpose": "Authentication", "dependencies": ["db.lua"]}
+        {"name": "db.lua", "purpose": "Database operations", "dependencies": ["config.lua"]}
       ],
       "structure": "Brief architecture description (2-3 sentences)",
-      "order": ["config.lua", "db.lua", "auth.lua", "api.lua"]
+      "order": ["config.lua", "db.lua", "auth.lua"]
     }
 
     Rules:
@@ -23,8 +24,7 @@ architect:
     - Build order: dependencies first, then dependents
     - Remember: Lua sandbox restrictions apply (no external libraries, no file I/O)
     - Use in-memory data structures for data storage
-
-    Return ONLY valid JSON, no explanations.
+    - IMPORTANT: Return ONLY the JSON object, nothing else
 
 generator:
   role: "Lua code generator"
