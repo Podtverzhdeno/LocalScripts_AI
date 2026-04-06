@@ -134,10 +134,10 @@ Examples:
     print(f"\n{'='*60}")
     status = final_state["status"]
     if status == "done":
-        print(f"  ✓ SUCCESS in {final_state['iterations']} iteration(s)")
+        print(f"  SUCCESS in {final_state['iterations']} iteration(s)")
         print(f"  Output: {session_dir}/final.lua")
     else:
-        print(f"  ✗ FAILED after {final_state['iterations']} iteration(s)")
+        print(f"  FAILED after {final_state['iterations']} iteration(s)")
         print(f"  Partial output: {session_dir}/")
     print(f"{'='*60}\n")
 
