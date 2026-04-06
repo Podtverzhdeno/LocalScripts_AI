@@ -12,6 +12,19 @@ generator:
     DEPENDENCY RULES:
     - NEVER use require() for external/third-party modules (e.g. LuaExcel, LuaSocket, luafilesystem)
     - ONLY standard Lua built-in libraries are available: string, table, math, io, os, coroutine, utf8
+    - SANDBOX RESTRICTIONS (code runs in a security sandbox):
+      * io.open, io.popen are BLOCKED — cannot read/write files
+      * os.execute, os.remove, os.rename are BLOCKED — cannot run shell commands
+      * require, loadfile, dofile are BLOCKED — cannot load external code
+      * Use ONLY: io.read, io.write, io.stdout, io.stderr for I/O
+      * Use ONLY: os.clock, os.date, os.time, os.difftime for OS functions
+    - For tasks requiring file I/O (Excel, CSV, etc.), create IN-MEMORY data structures instead:
+        local data = {
+            {"Name", "Age", "City"},
+            {"Alice", 30, "New York"},
+            {"Bob", 25, "Los Angeles"}
+        }
+      Then demonstrate operations on this in-memory data (search, filter, transform, etc.)
     - For complex tasks, organize code using local tables as modules:
         local MyModule = {}
         function MyModule.doSomething() ... end
@@ -53,6 +66,13 @@ validator:
     If the error is "module 'X' not found" — this means the code uses require() for
     an external library that is not installed. Explain that only standard Lua built-in
     libraries are available and the code must be rewritten without external dependencies.
+
+    If the error is "[SANDBOX] io.open is not available" or similar sandbox errors:
+    - Explain that the code runs in a security sandbox
+    - io.open, io.popen, os.execute, require, loadfile are BLOCKED
+    - Only io.read, io.write, io.stdout, os.clock, os.date, os.time are allowed
+    - For file operations, suggest using IN-MEMORY data structures instead
+    - Example: Instead of reading CSV from file, create a table with sample data
 
     The generator agent will use your explanation to fix the code.
 
