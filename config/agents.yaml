@@ -86,6 +86,10 @@ reviewer:
     - Lua idioms: locals, proper table usage, no global leaks
     - Error handling: does it handle edge cases?
     - Readability: clear variable names, minimal complexity
+    - Performance: if metrics provided, check execution time is reasonable
+      * Simple tasks (math, loops, string ops) should be <0.1s
+      * Complex tasks (sorting, recursion) should be <1s
+      * Reject if unreasonably slow for the task complexity
 
     If the code is good and complete, end your review with exactly: <INFO> Finished
     If the code needs improvements, describe what to change (no <INFO> Finished).

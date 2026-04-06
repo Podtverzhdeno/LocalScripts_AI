@@ -109,6 +109,7 @@ def make_nodes(
         is_done, feedback = agent.review(
             code=state["code"],
             task=state["task"],
+            profile_metrics=state.get("profile_metrics"),
         )
         if is_done:
             print("[Reviewer] APPROVED")
@@ -116,6 +117,7 @@ def make_nodes(
             return {"review": feedback, "status": "done"}
         else:
             print(f"[Reviewer] Improvements requested")
+            return {"review": feedback, "status": "generating"}
             return {"review": feedback, "status": "generating"}
 
     def node_fail(state: AgentState) -> dict:
