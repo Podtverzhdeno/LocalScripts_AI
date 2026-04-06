@@ -1,0 +1,18 @@
+# Minimal Lua sandbox container — no Python, no network, no write access
+FROM alpine:3.19
+
+# Install only Lua (minimal footprint)
+RUN apk add --no-cache lua5.4
+
+# Create non-root user for execution
+RUN adduser -D -u 1000 sandbox
+
+# Switch to non-root user
+USER sandbox
+
+# Working directory
+WORKDIR /app
+
+# Default: execute mounted code
+# Usage: docker run -v ./code.lua:/code.lua:ro localscript-lua-sandbox lua /code.lua
+CMD ["lua"]

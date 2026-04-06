@@ -1,0 +1,99 @@
+{
+  "name": "localscript",
+  "displayName": "LocalScript AI",
+  "description": "Generate Lua code from comments using AI. Press Ctrl+Shift+L to transform comments into working code.",
+  "version": "0.1.0",
+  "publisher": "localscript",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Snippets"
+  ],
+  "keywords": [
+    "lua",
+    "ai",
+    "code generation",
+    "copilot",
+    "autocomplete"
+  ],
+  "activationEvents": [
+    "onLanguage:lua"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "localscript.generateCode",
+        "title": "LocalScript: Generate Code from Comment",
+        "when": "editorHasSelection"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "localscript.generateCode",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l",
+        "when": "editorTextFocus && editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "LocalScript",
+      "properties": {
+        "localscript.apiUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "LocalScript API server URL"
+        },
+        "localscript.maxIterations": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum code generation iterations"
+        },
+        "localscript.timeout": {
+          "type": "number",
+          "default": 60,
+          "description": "Request timeout in seconds"
+        },
+        "localscript.sandboxMode": {
+          "type": "string",
+          "enum": ["lua", "docker", "none"],
+          "default": "lua",
+          "description": "Sandbox mode for code execution"
+        },
+        "localscript.enableCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable LSP-style code completion from comments"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.19.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Podtverzhdeno/LocalScripts_AI"
+  },
+  "license": "MIT"
+}

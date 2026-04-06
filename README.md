@@ -8,10 +8,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-66%20passed-brightgreen.svg)](#-testing)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](#-mcp-server)
+[![VS Code](https://img.shields.io/badge/VS%20Code-extension-blue.svg)](#-vs-code-extension)
 
 Describe a task in plain English — get working, reviewed Lua code.
 
-**CLI** · **Web UI** · **REST API** · **MCP Server**
+**CLI** · **Web UI** · **REST API** · **MCP Server** · **VS Code Extension**
 
 </div>
 
@@ -174,19 +175,71 @@ Task → [LLM: plan algorithm, structures, edge cases] → plan
 
 ## 🔒 Sandbox
 
-Generated Lua code runs in a **sandbox** that blocks dangerous system calls. Enabled by default.
+Generated Lua code runs in a **sandbox** that blocks dangerous system calls. Three modes available:
+
+### Sandbox Modes
+
+| Mode | Security Level | Use Case |
+|------|---------------|----------|
+| **`lua`** (default) | High | Lua-level isolation, blocks dangerous functions |
+| **`docker`** | Maximum | Full container isolation, no network, limited resources |
+| **`none`** | ⚠️ None | Unsafe — for testing only |
+
+### Lua Sandbox (default)
+
+Blocks dangerous system calls via Lua environment restrictions:
 
 | Blocked | Allowed |
 |---------|--------|
 | `os.execute`, `os.remove`, `os.rename`, `os.exit` | `os.clock`, `os.date`, `os.time` |
 | `io.popen`, `io.open` | `io.read`, `io.write`, `io.stdout` |
-| `require`, `loadfile`, `dofile`, `package` | `print`, `type`, `tostring`, `pcall` |
-| `debug.*`, `rawset` | `string.*`, `table.*`, `math.*`, `coroutine.*` |
+| `require`, `loadfile`, `dofile`, `load`, `package` | `print`, `type`, `tostring`, `pcall` |
+| `debug.*`, `rawset`, `setfenv`, `getfenv` | `string.*`, `table.*`, `math.*`, `coroutine.*` |
 
-Disable in `config/settings.yaml` if needed:
+**Enhanced protection:**
+- Metatable protection prevents sandbox bypass
+- Protected tables (`os`, `io`) cannot be modified
+- Global environment locked after sandbox setup
+- `setmetatable` restricted on system tables
+
+### Docker Sandbox
+
+Full isolation in disposable containers:
+
+```bash
+python main.py --task "your task" --sandbox docker
+```
+
+**Security features:**
+- No network access (`--network none`)
+- Limited memory (128MB) and CPU (50%)
+- Read-only filesystem (except `/tmp`)
+- Non-root user execution
+- Container destroyed after execution
+
+**Requirements:**
+- Docker installed and running
+- Image built automatically on first use
+
+### Configuration
+
+**CLI:**
+```bash
+python main.py --task "write fibonacci" --sandbox lua     # Default
+python main.py --task "write fibonacci" --sandbox docker  # Maximum security
+python main.py --task "write fibonacci" --sandbox none    # Unsafe
+```
+
+**Config file** (`config/settings.yaml`):
 ```yaml
 pipeline:
-  sandbox: false    # ⚠️ not recommended — allows arbitrary system access
+  sandbox_mode: lua    # "lua" | "docker" | "none"
+```
+
+**Environment variable:**
+```bash
+export SANDBOX_MODE=docker
+python main.py --task "your task"
 ```
 
 ---
@@ -201,6 +254,41 @@ python main.py --task-file examples/fibonacci.txt --output ./out/
 python main.py --task "sort a table" --backend ollama --max-iterations 5
 ```
 
+### 🎨 VS Code Extension
+
+**Generate code directly in your editor** — select a comment, press `Ctrl+Shift+L`, get working code.
+
+```lua
+-- write a fibonacci function with memoization
+```
+↓ Press `Ctrl+Shift+L` ↓
+```lua
+local memo = {}
+function fibonacci(n)
+    if n <= 1 then return n end
+    if memo[n] then return memo[n] end
+    memo[n] = fibonacci(n-1) + fibonacci(n-2)
+    return memo[n]
+end
+```
+
+**Installation:**
+```bash
+cd extensions/vscode
+npm install
+npm run compile
+npm run package
+code --install-extension localscript-0.1.0.vsix
+```
+
+**Features:**
+- ⚡ Instant code generation with `Ctrl+Shift+L`
+- 💡 LSP-style completion from comments
+- ⚙️ Configurable API URL, timeout, sandbox mode
+- 📊 Progress notifications
+
+**Docs:** [extensions/vscode/README.md](extensions/vscode/README.md)
+
 ### Web UI
 
 ```bash
@@ -210,10 +298,12 @@ python api/server.py
 
 Features:
 - Task input with live status updates
+- **Interactive execution graph** — real-time d3.js visualization of agent flow
 - Session browser with iteration history
 - File viewer with syntax highlighting
 - WebSocket real-time progress
 - Final Lua code display
+- Clickable graph nodes for quick navigation to logs and code
 
 ### REST API
 

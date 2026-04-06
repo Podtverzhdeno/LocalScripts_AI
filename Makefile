@@ -1,4 +1,4 @@
-.PHONY: run test lint local install clean
+.PHONY: run test lint local install clean docker-sandbox-build docker-sandbox-test
 
 # Run with OpenAI backend (default)
 run:
@@ -11,6 +11,18 @@ task:
 # Run with Ollama (local, no API key needed)
 local:
 	LLM_BACKEND=ollama python main.py --task "$(or $(TASK),write fibonacci in Lua)"
+
+# Run with Docker sandbox (maximum security)
+docker:
+	python main.py --task "$(or $(TASK),write fibonacci in Lua)" --sandbox docker
+
+# Build Docker sandbox image
+docker-sandbox-build:
+	docker build -f Dockerfile.sandbox -t localscript-lua-sandbox .
+
+# Test Docker sandbox
+docker-sandbox-test:
+	pytest tests/test_docker_sandbox.py -v
 
 # Run tests
 test:
@@ -31,6 +43,10 @@ install:
 # Remove workspace sessions
 clean:
 	rm -rf workspace/session_*
+
+# Remove Docker sandbox image
+docker-clean:
+	docker rmi localscript-lua-sandbox || true
 
 # Show graph as mermaid diagram (requires langgraph installed)
 graph:

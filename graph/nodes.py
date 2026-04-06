@@ -4,6 +4,7 @@ LLM injected via closure from pipeline.py — avoids re-initializing on every ca
 and makes mocking in tests trivial.
 """
 
+import os
 from pathlib import Path
 from langchain_core.language_models import BaseChatModel
 from graph.state import AgentState
@@ -15,8 +16,11 @@ def _get_runner(state: AgentState) -> LuaRunner:
     settings = load_settings()
     pipeline_cfg = settings["pipeline"]
     timeout = pipeline_cfg.get("execution_timeout", 10)
-    sandbox = pipeline_cfg.get("sandbox", True)
-    return LuaRunner(session_dir=state["session_dir"], timeout=timeout, sandbox=sandbox)
+
+    # Get sandbox mode from env (CLI override) or settings
+    sandbox_mode = os.getenv("SANDBOX_MODE", pipeline_cfg.get("sandbox_mode", "lua"))
+
+    return LuaRunner(session_dir=state["session_dir"], timeout=timeout, sandbox=sandbox_mode)
 
 
 def make_nodes(
@@ -25,6 +29,7 @@ def make_nodes(
     llm_generator: BaseChatModel | None = None,
     llm_validator: BaseChatModel | None = None,
     llm_reviewer: BaseChatModel | None = None,
+    node_callback=None,
 ):
     """
     Factory that returns node functions with LLM injected via closure.
@@ -46,6 +51,8 @@ def make_nodes(
 
     def node_generate(state: AgentState) -> dict:
         """Generator node — writes or fixes Lua code."""
+        if node_callback:
+            node_callback("generate", state)
         agent = GeneratorAgent(_gen_llm)
         code = agent.generate(
             task=state["task"],
@@ -66,6 +73,8 @@ def make_nodes(
 
     def node_validate(state: AgentState) -> dict:
         """Validator node — runs luac + lua, explains errors via LLM."""
+        if node_callback:
+            node_callback("validate", state)
         runner = _get_runner(state)
         agent = ValidatorAgent(_val_llm, runner)
         is_valid, error_explanation = agent.validate(
@@ -74,29 +83,33 @@ def make_nodes(
             iteration=state["iterations"],
         )
         if is_valid:
-            print(f"[Validator] ✓ Code OK")
+            print(f"[Validator] OK - Code valid")
             return {"errors": None, "status": "reviewing"}
         else:
-            print(f"[Validator] ✗ Errors — retrying")
+            print(f"[Validator] ERROR - Retrying")
             return {"errors": error_explanation, "status": "generating"}
 
     def node_review(state: AgentState) -> dict:
         """Reviewer node — quality check, may request improvements."""
+        if node_callback:
+            node_callback("review", state)
         agent = ReviewerAgent(_rev_llm)
         is_done, feedback = agent.review(
             code=state["code"],
             task=state["task"],
         )
         if is_done:
-            print("[Reviewer] ✓ Approved")
+            print("[Reviewer] APPROVED")
             _save_final({**state, "status": "done"}, feedback)
             return {"review": feedback, "status": "done"}
         else:
-            print(f"[Reviewer] → Improvements requested")
+            print(f"[Reviewer] Improvements requested")
             return {"review": feedback, "status": "generating"}
 
     def node_fail(state: AgentState) -> dict:
         """Terminal failure — max iterations reached."""
+        if node_callback:
+            node_callback("fail", state)
         print(f"\n[Pipeline] Max iterations ({state['max_iterations']}) reached.")
         _save_final(state, "Max iterations reached — partial result saved.")
         return {"status": "failed"}

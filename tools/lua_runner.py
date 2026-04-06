@@ -3,9 +3,15 @@ Lua code execution tool.
 Runs luac (compile check) and lua (execute) in a sandboxed subprocess.
 Writes each iteration to the session workspace directory.
 
-Sandbox mode (enabled by default) blocks dangerous system calls:
-  os.execute, io.popen, loadfile, dofile, require, debug, etc.
-  See tools/sandbox.py for the full list.
+Sandbox modes:
+  - 'lua' (default): Lua-level sandbox blocks dangerous system calls
+    (os.execute, io.popen, loadfile, dofile, require, debug, etc.)
+  - 'docker': Full isolation in disposable Docker container
+    (no network, limited resources, read-only filesystem)
+  - 'none': No sandbox (UNSAFE — for testing only)
+
+See tools/sandbox.py for Lua sandbox details.
+See tools/docker_sandbox.py for Docker sandbox details.
 """
 
 import os
@@ -13,8 +19,11 @@ import subprocess
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from tools.sandbox import wrap_in_sandbox
+
+SandboxMode = Literal["lua", "docker", "none"]
 
 # luac -o needs a null device; /dev/null doesn't exist on Windows
 _NULL_DEVICE = "NUL" if os.name == "nt" else "/dev/null"
@@ -60,15 +69,40 @@ class LuaResult:
 class LuaRunner:
     """
     Compiles and executes Lua code, saving each attempt to the session directory.
-    Inspired by ChatDev's uv_run tool with timeout support.
+    Supports multiple sandbox modes: lua (default), docker, or none.
     """
 
-    def __init__(self, session_dir: str | Path, timeout: int = 10, sandbox: bool = True):
+    def __init__(
+        self,
+        session_dir: str | Path,
+        timeout: int = 10,
+        sandbox: SandboxMode = "lua",
+    ):
         self.session_dir = Path(session_dir)
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
         self.sandbox = sandbox
         self._check_lua_installed()
+        self._docker_runner = None
+
+        if sandbox == "docker":
+            self._init_docker_runner()
+
+    def _init_docker_runner(self) -> None:
+        """Initialize Docker runner if docker mode is enabled."""
+        try:
+            from tools.docker_sandbox import DockerLuaRunner, DockerConfig
+            config = DockerConfig(timeout=self.timeout)
+            self._docker_runner = DockerLuaRunner(self.session_dir, config)
+        except ImportError as e:
+            raise ImportError(
+                f"Docker sandbox requires docker_sandbox module: {e}"
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to initialize Docker sandbox: {e}\n"
+                "Make sure Docker is installed and running."
+            )
 
     def _check_lua_installed(self) -> None:
         if not shutil.which("lua") and not shutil.which("lua5.4") and not shutil.which("lua5.3"):
@@ -139,7 +173,14 @@ class LuaRunner:
         )
 
     def execute(self, code: str, iteration: int) -> LuaResult:
-        """Compile + execute Lua code with timeout. Sandbox enabled by default."""
+        """Compile + execute Lua code with timeout. Sandbox mode configurable."""
+        # Docker mode: delegate to Docker runner
+        if self.sandbox == "docker":
+            if self._docker_runner is None:
+                raise RuntimeError("Docker runner not initialized")
+            return self._docker_runner.execute(code, iteration)
+
+        # Lua/none mode: local execution
         lua_file = self.save_iteration(code, iteration)
 
         # Step 1: compile (original code, no sandbox — sandbox preamble is valid Lua)
@@ -149,10 +190,14 @@ class LuaRunner:
             err_path.write_text(compile_result.errors, encoding="utf-8")
             return compile_result
 
-        # Step 2: wrap in sandbox and execute
-        exec_code = wrap_in_sandbox(code) if self.sandbox else code
-        exec_file = self.session_dir / f"iteration_{iteration}_sandboxed.lua"
-        exec_file.write_text(exec_code, encoding="utf-8")
+        # Step 2: wrap in sandbox and execute (if sandbox enabled)
+        if self.sandbox == "lua":
+            exec_code = wrap_in_sandbox(code)
+            exec_file = self.session_dir / f"iteration_{iteration}_sandboxed.lua"
+            exec_file.write_text(exec_code, encoding="utf-8")
+        else:
+            # No sandbox mode
+            exec_file = lua_file
 
         try:
             result = subprocess.run(

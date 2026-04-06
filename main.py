@@ -62,6 +62,10 @@ Examples:
         "--max-iterations", type=int, default=None,
         help="Max retry iterations (default: from settings.yaml)"
     )
+    parser.add_argument(
+        "--sandbox", type=str, choices=["lua", "docker", "none"], default="lua",
+        help="Sandbox mode: lua (default, Lua-level isolation), docker (full container isolation), none (unsafe)"
+    )
 
     args = parser.parse_args()
 
@@ -77,6 +81,8 @@ Examples:
     # Apply overrides
     if args.backend:
         os.environ["LLM_BACKEND"] = args.backend
+    if args.sandbox:
+        os.environ["SANDBOX_MODE"] = args.sandbox
 
     settings = load_settings()
     max_iterations = args.max_iterations or int(os.getenv(
@@ -95,6 +101,7 @@ Examples:
     print(f"{'='*60}")
     print(f"  Task      : {task[:80]}{'...' if len(task) > 80 else ''}")
     print(f"  Backend   : {os.getenv('LLM_BACKEND', settings['llm']['backend'])}")
+    print(f"  Sandbox   : {args.sandbox}")
     print(f"  Max iters : {max_iterations}")
     print(f"  Session   : {session_dir}")
     print(f"{'='*60}\n")
