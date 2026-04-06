@@ -159,10 +159,23 @@ Examples:
 
     # Route to appropriate pipeline
     if args.mode == "project":
-        # TODO: Implement project pipeline
-        print("[Project Mode] Not implemented yet - coming soon!")
-        print("Will create: Architect -> Generator -> Decomposer -> Evolver")
-        sys.exit(0)
+        from graph.project_pipeline import run_project_pipeline
+        try:
+            final_state = run_project_pipeline(
+                requirements=task,
+                project_dir=session_dir,
+                max_iterations=max_iterations,
+                evolutions=args.evolutions,
+            )
+            print(f"\n{'='*60}")
+            print(f"  SUCCESS - Project created")
+            print(f"  Files: {len(final_state['files'])}")
+            print(f"  Output: {final_state['project_dir']}")
+            print(f"{'='*60}\n")
+        except Exception as e:
+            print(f"\n  Error: {e}\n")
+            sys.exit(1)
+        return
 
     # Quick mode - existing pipeline
     from graph.pipeline import run_pipeline
