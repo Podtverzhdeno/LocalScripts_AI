@@ -27,5 +27,8 @@ class AgentState(TypedDict):
     # Session workspace
     session_dir: str                   # Path to workspace/session_TIMESTAMP/
 
+    # Profiling metrics
+    profile_metrics: Optional[dict]    # {"time": float, "memory": int}
+
     # LangGraph messages (for agent memory within a node)
     messages: Annotated[list, add_messages]

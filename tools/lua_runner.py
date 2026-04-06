@@ -36,6 +36,8 @@ class LuaResult:
     stderr: str
     timed_out: bool = False
     compiled_ok: bool = False  # True if luac passed (syntax is valid)
+    execution_time: float = 0.0  # Execution time in seconds
+    memory_used: int = 0  # Memory used in KB (if available)
 
     @property
     def errors(self) -> str:
@@ -57,12 +59,16 @@ class LuaResult:
         return self.compiled_ok and self.has_output and not self.success and not self.timed_out
 
     def __str__(self) -> str:
+        profile_info = ""
+        if self.execution_time > 0:
+            profile_info = f"\n[Profile] Time: {self.execution_time:.3f}s, Memory: {self.memory_used}KB"
+
         if self.success:
-            return f"OK\n{self.stdout}" if self.stdout else "OK"
+            return f"OK{profile_info}\n{self.stdout}" if self.stdout else f"OK{profile_info}"
         if self.timed_out:
             return f"TIMEOUT\n{self.stderr}"
         if self.is_intentional_error:
-            return f"OK_WITH_EXPECTED_ERROR\n{self.stdout}\n---\n{self.stderr}"
+            return f"OK_WITH_EXPECTED_ERROR{profile_info}\n{self.stdout}\n---\n{self.stderr}"
         return f"ERROR\n{self.stderr}"
 
 
@@ -199,18 +205,34 @@ class LuaRunner:
             # No sandbox mode
             exec_file = lua_file
 
+        # Step 3: Add profiling wrapper
+        profiled_code = self._wrap_with_profiling(exec_file.read_text(encoding="utf-8"))
+        profiled_file = self.session_dir / f"iteration_{iteration}_profiled.lua"
+        profiled_file.write_text(profiled_code, encoding="utf-8")
+
         try:
+            import time
+            start_time = time.perf_counter()
+
             result = subprocess.run(
-                [self._get_lua_binary(), str(exec_file)],
+                [self._get_lua_binary(), str(profiled_file)],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
             )
+
+            execution_time = time.perf_counter() - start_time
+
+            # Parse profiling output from stderr (where it's written)
+            memory_used = self._parse_memory_from_output(result.stderr)
+
             lua_result = LuaResult(
                 success=result.returncode == 0,
                 stdout=result.stdout,
                 stderr=result.stderr,
                 compiled_ok=True,  # syntax was valid
+                execution_time=execution_time,
+                memory_used=memory_used,
             )
         except subprocess.TimeoutExpired:
             lua_result = LuaResult(
@@ -231,3 +253,32 @@ class LuaRunner:
             err_path.write_text(lua_result.errors, encoding="utf-8")
 
         return lua_result
+
+    def _wrap_with_profiling(self, code: str) -> str:
+        """Wrap code with profiling instrumentation."""
+        profiling_wrapper = '''
+-- ═══ Profiling Start ═══
+local _start_time = os.clock()
+collectgarbage("collect")
+local _mem_before = collectgarbage("count")
+
+-- ═══ User Code ═══
+''' + code + '''
+
+-- ═══ Profiling End ═══
+collectgarbage("collect")
+local _mem_after = collectgarbage("count")
+local _elapsed = os.clock() - _start_time
+local _mem_used = _mem_after - _mem_before
+
+io.stderr:write(string.format("\\n[PROFILE] time=%.6f memory=%.2f\\n", _elapsed, _mem_used))
+'''
+        return profiling_wrapper
+
+    def _parse_memory_from_output(self, output: str) -> int:
+        """Parse memory usage from profiling output."""
+        import re
+        match = re.search(r'\[PROFILE\].*memory=([\d.]+)', output)
+        if match:
+            return int(float(match.group(1)))
+        return 0

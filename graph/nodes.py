@@ -82,9 +82,21 @@ def make_nodes(
             task=state["task"],
             iteration=state["iterations"],
         )
+
+        # Get profiling metrics from last execution
+        profile_metrics = None
+        if hasattr(agent, '_last_result') and agent._last_result:
+            result = agent._last_result
+            if result.execution_time > 0:
+                print(f"[Validator] Performance: {result.execution_time:.3f}s, {result.memory_used}KB")
+                profile_metrics = {
+                    "time": result.execution_time,
+                    "memory": result.memory_used
+                }
+
         if is_valid:
             print(f"[Validator] OK - Code valid")
-            return {"errors": None, "status": "reviewing"}
+            return {"errors": None, "status": "reviewing", "profile_metrics": profile_metrics}
         else:
             print(f"[Validator] ERROR - Retrying")
             return {"errors": error_explanation, "status": "generating"}
@@ -121,9 +133,19 @@ def _save_final(state: AgentState, review_text: str) -> None:
     session = Path(state["session_dir"])
     if state.get("code"):
         (session / "final.lua").write_text(state["code"], encoding="utf-8")
+
+    # Build report with profiling metrics
     report = f"# LocalScript Report\n\n## Task\n{state['task']}\n\n"
     report += f"## Iterations\n{state['iterations']}\n\n"
     report += f"## Status\n{state['status']}\n\n"
+
+    # Add profiling metrics if available
+    if state.get("profile_metrics"):
+        metrics = state["profile_metrics"]
+        report += f"## Performance\n"
+        report += f"- Execution time: {metrics.get('time', 0):.3f}s\n"
+        report += f"- Memory used: {metrics.get('memory', 0)}KB\n\n"
+
     report += f"## Review\n{review_text}\n"
     (session / "report.md").write_text(report, encoding="utf-8")
     print(f"[Pipeline] Saved to: {session}")

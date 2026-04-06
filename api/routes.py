@@ -93,6 +93,20 @@ async def _run_pipeline_async(
 
     loop = asyncio.get_running_loop()
 
+    # Node callback for real-time graph updates
+    def node_callback(node_name: str, state):
+        """Called when a node starts executing."""
+        iteration = state.get("iterations", 0)
+        asyncio.run_coroutine_threadsafe(
+            _broadcast(session_id, {
+                "event": "node_enter",
+                "node": node_name,
+                "iteration": iteration,
+                "status": state.get("status", "unknown"),
+            }),
+            loop
+        )
+
     try:
         final_state = await loop.run_in_executor(
             None,
@@ -100,6 +114,7 @@ async def _run_pipeline_async(
                 task=task,
                 session_dir=session_dir,
                 max_iterations=max_iterations,
+                node_callback=node_callback,
             ),
         )
         status = final_state.get("status", "failed")

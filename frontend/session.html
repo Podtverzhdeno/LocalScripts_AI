@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Session — LocalScript</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -51,6 +52,16 @@
         }
         .log-line:nth-child(even) { background: rgba(255,255,255,0.01); }
         .file-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+
+        /* Graph tooltip */
+        .graph-tooltip { font-family: 'Inter', sans-serif; }
+
+        /* Timeline modal backdrop */
+        #timelineModal { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Smooth transitions */
+        .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="bg-[#0a0f1a] text-gray-100 min-h-screen bg-grid">
@@ -74,6 +85,46 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-10 space-y-8">
+
+        <!-- ── Interactive Graph Visualization ── -->
+        <section class="fade-up">
+            <div class="glass rounded-2xl border border-white/5 overflow-hidden glow-emerald">
+                <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <h2 class="font-semibold">Execution Graph</h2>
+                        <span class="text-xs text-gray-500">Click nodes to view logs</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="showExecutionTimeline()" class="text-xs text-gray-500 hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Timeline
+                        </button>
+                        <button onclick="pipelineGraph.reset()" class="text-xs text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Reset
+                        </button>
+                    </div>
+                </div>
+                <div id="graphContainer" class="bg-[#0a0f1a]/50"></div>
+            </div>
+        </section>
+
+        <!-- ── Execution Timeline Modal ── -->
+        <div id="timelineModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div class="glass rounded-2xl border border-white/5 max-w-3xl w-full max-h-[80vh] overflow-hidden">
+                <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <h3 class="font-semibold">Execution Timeline</h3>
+                    </div>
+                    <button onclick="hideExecutionTimeline()" class="text-gray-500 hover:text-gray-300 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div id="timelineContent" class="px-6 py-4 overflow-y-auto max-h-[60vh]"></div>
+            </div>
+        </div>
 
         <!-- ── Pipeline Status ── -->
         <section class="fade-up">
@@ -213,11 +264,58 @@
     </main>
 
     <script src="/static/app.js"></script>
+    <script src="/static/graph.js"></script>
     <script>
         const SESSION_ID = window.location.pathname.split('/session/')[1];
         const POLL_INTERVAL_MS = 3000;
 
         document.getElementById('headerSessionId').textContent = SESSION_ID;
+
+        // Initialize graph
+        let pipelineGraph = new PipelineGraph('graphContainer');
+
+        // Handle node clicks - show relevant files
+        document.getElementById('graphContainer').addEventListener('nodeClick', async (e) => {
+            const { nodeId, agent, stats } = e.detail;
+            console.log('Node clicked:', nodeId, agent, stats);
+
+            if (!agent) return;
+
+            try {
+                const files = await api(`/api/session/${SESSION_ID}/files`);
+
+                // Find relevant files for this agent
+                let targetFile = null;
+                if (agent === 'generator') {
+                    // Show latest iteration file
+                    const iterFiles = files.filter(f => f.name.match(/^iteration_\d+\.lua$/))
+                        .sort((a, b) => b.name.localeCompare(a.name));
+                    targetFile = iterFiles[0]?.name;
+                } else if (agent === 'validator') {
+                    // Show latest error file if exists
+                    const errFiles = files.filter(f => f.name.match(/^iteration_\d+_errors\.txt$/))
+                        .sort((a, b) => b.name.localeCompare(a.name));
+                    targetFile = errFiles[0]?.name;
+                } else if (agent === 'reviewer') {
+                    // Show report
+                    targetFile = files.find(f => f.name === 'report.md')?.name;
+                }
+
+                if (targetFile) {
+                    viewFile(targetFile);
+                } else {
+                    // Show stats in viewer
+                    const viewer = document.getElementById('fileViewer');
+                    const nameEl = document.getElementById('viewerFilename');
+                    const contentEl = document.getElementById('viewerContent');
+                    nameEl.textContent = `${agent} stats`;
+                    contentEl.textContent = `Agent: ${agent}\nExecutions: ${stats.count}\nLast run: ${stats.lastTime || 'N/A'}`;
+                    viewer.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Failed to load agent files:', err);
+            }
+        });
 
         // ── Status rendering ──
         function renderStatus(data) {
@@ -359,20 +457,41 @@
             const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const ws = new WebSocket(`${proto}//${location.host}/api/ws/${SESSION_ID}`);
 
-            ws.onopen = () => { appendLog(logEl, '● Connected'); wsStatus.className = 'w-2 h-2 rounded-full bg-emerald-500'; };
-            ws.onclose = () => { appendLog(logEl, '● Disconnected'); wsStatus.className = 'w-2 h-2 rounded-full bg-gray-600'; };
-            ws.onerror = () => { appendLog(logEl, '● Error'); wsStatus.className = 'w-2 h-2 rounded-full bg-red-500'; };
+            ws.onopen = () => {
+                appendLog(logEl, '● Connected');
+                wsStatus.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            };
+            ws.onclose = () => {
+                appendLog(logEl, '● Disconnected');
+                wsStatus.className = 'w-2 h-2 rounded-full bg-gray-600';
+            };
+            ws.onerror = () => {
+                appendLog(logEl, '● Error');
+                wsStatus.className = 'w-2 h-2 rounded-full bg-red-500';
+            };
 
             ws.onmessage = (evt) => {
                 try {
                     const msg = JSON.parse(evt.data);
                     appendLog(logEl, `[${msg.event}] iter=${msg.iteration || '—'} status=${msg.status || '—'}`);
-                    if (msg.event === 'progress' || msg.event === 'status') {
+
+                    // Handle graph updates
+                    if (msg.event === 'node_enter') {
+                        pipelineGraph.setActiveNode(msg.node, msg.iteration);
+                    } else if (msg.event === 'progress' || msg.event === 'status') {
                         document.getElementById('iterationText').textContent = msg.iteration;
                         loadFiles();
+                    } else if (msg.event === 'completed' || msg.event === 'finished') {
+                        if (msg.status === 'done') {
+                            pipelineGraph.setActiveNode('end', msg.iteration);
+                        } else if (msg.status === 'failed') {
+                            pipelineGraph.setActiveNode('fail', msg.iteration);
+                        }
+                        refreshAll();
                     }
-                    if (msg.event === 'completed' || msg.event === 'finished') refreshAll();
-                } catch { appendLog(logEl, evt.data); }
+                } catch {
+                    appendLog(logEl, evt.data);
+                }
             };
         }
 
@@ -403,6 +522,80 @@
         function formatBytes(bytes) {
             if (bytes < 1024) return bytes + ' B';
             return (bytes / 1024).toFixed(1) + ' KB';
+        }
+
+        // ── Timeline Modal ──
+        function showExecutionTimeline() {
+            const modal = document.getElementById('timelineModal');
+            const content = document.getElementById('timelineContent');
+
+            const history = pipelineGraph.getHistory();
+            const stats = pipelineGraph.getStats();
+
+            if (history.length === 0) {
+                content.innerHTML = '<p class="text-gray-500 text-center py-8">No execution history yet</p>';
+            } else {
+                let html = '<div class="space-y-3">';
+
+                // Group by iteration
+                const byIteration = {};
+                history.forEach(h => {
+                    const iter = h.iteration || 0;
+                    if (!byIteration[iter]) byIteration[iter] = [];
+                    byIteration[iter].push(h);
+                });
+
+                Object.keys(byIteration).sort((a, b) => b - a).forEach(iter => {
+                    const events = byIteration[iter];
+                    html += `<div class="glass rounded-xl border border-white/5 p-4">`;
+                    html += `<div class="flex items-center gap-2 mb-3">`;
+                    html += `<div class="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center text-xs font-bold text-emerald-400">${iter}</div>`;
+                    html += `<span class="text-sm font-semibold text-gray-300">Iteration ${iter}</span>`;
+                    html += `</div>`;
+                    html += `<div class="space-y-2">`;
+
+                    events.forEach(event => {
+                        const nodeData = pipelineGraph.nodes.find(n => n.id === event.node);
+                        const icon = nodeData ? pipelineGraph.getAgentIcon(nodeData.agent) : '●';
+                        const label = nodeData ? nodeData.label : event.node;
+                        const time = new Date(event.timestamp).toLocaleTimeString();
+
+                        html += `<div class="flex items-center gap-3 text-xs">`;
+                        html += `<span class="text-lg">${icon}</span>`;
+                        html += `<span class="text-gray-300 flex-1">${escapeHtml(label)}</span>`;
+                        html += `<span class="text-gray-600 font-mono">${time}</span>`;
+                        html += `</div>`;
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                // Stats summary
+                html += `<div class="glass rounded-xl border border-white/5 p-4 mt-4">`;
+                html += `<h4 class="text-sm font-semibold text-gray-400 mb-3">Agent Statistics</h4>`;
+                html += `<div class="grid grid-cols-3 gap-3">`;
+
+                ['generator', 'validator', 'reviewer'].forEach(agent => {
+                    const nodeId = agent;
+                    const stat = stats[nodeId] || { count: 0 };
+                    const icon = pipelineGraph.getAgentIcon(agent);
+                    html += `<div class="text-center">`;
+                    html += `<div class="text-2xl mb-1">${icon}</div>`;
+                    html += `<div class="text-lg font-bold text-emerald-400">${stat.count}</div>`;
+                    html += `<div class="text-[10px] text-gray-500 capitalize">${agent}</div>`;
+                    html += `</div>`;
+                });
+
+                html += `</div></div>`;
+                html += '</div>';
+                content.innerHTML = html;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function hideExecutionTimeline() {
+            document.getElementById('timelineModal').classList.add('hidden');
         }
 
         // ── Init ──

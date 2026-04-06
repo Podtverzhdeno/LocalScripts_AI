@@ -12,6 +12,7 @@ class ValidatorAgent(BaseAgent):
     def __init__(self, llm: BaseChatModel, runner: LuaRunner):
         super().__init__("validator", llm)
         self.runner = runner
+        self._last_result: LuaResult | None = None  # Store last execution result
 
     def validate(self, code: str, task: str, iteration: int) -> tuple[bool, str]:
         """
@@ -19,6 +20,7 @@ class ValidatorAgent(BaseAgent):
         Returns: (is_valid, error_explanation_or_empty)
         """
         result: LuaResult = self.runner.execute(code, iteration)
+        self._last_result = result  # Save for profiling metrics
 
         if result.success:
             return True, ""
