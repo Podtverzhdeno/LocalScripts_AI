@@ -41,18 +41,37 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py --task "write a fibonacci function"
-  python main.py --task "parse CSV and sum a column" --output ./out/
-  python main.py --task "implement quicksort" --backend ollama
-  python main.py --task-file examples/tasks/fibonacci.txt
+  Quick Mode (single file):
+    python main.py --task "write a fibonacci function"
+    python main.py --task "parse CSV and sum a column" --output ./out/
+    python main.py --task "implement quicksort" --backend ollama
+    python main.py --task-file examples/tasks/fibonacci.txt
+
+  Project Mode (multi-file with evolution):
+    python main.py --mode project --spec requirements.md
+    python main.py --mode project --task "create REST API with auth"
+    python main.py --mode project --spec requirements.md --evolutions 5
+    python main.py --mode project --task "authentication system" --evolutions 0
         """
     )
 
-    parser.add_argument("--task", type=str, help="Lua task description")
-    parser.add_argument("--task-file", type=str, help="Path to .txt file with task")
+    parser.add_argument(
+        "--mode", type=str, choices=["quick", "project"], default="quick",
+        help="Execution mode: quick (single file, fast) or project (multi-file with evolution)"
+    )
+    parser.add_argument("--task", type=str, help="Task description (for both modes)")
+    parser.add_argument("--task-file", type=str, help="Path to .txt file with task (quick mode)")
+    parser.add_argument(
+        "--spec", type=str,
+        help="Path to requirements.md file (project mode only)"
+    )
+    parser.add_argument(
+        "--evolutions", type=int, default=3,
+        help="Number of evolution iterations (project mode only, 0 = no evolution, -1 = until no improvements)"
+    )
     parser.add_argument(
         "--output", type=str, default=None,
-        help="Output directory (default: workspace/session_TIMESTAMP/)"
+        help="Output directory (default: workspace/session_TIMESTAMP/ or workspace/project_TIMESTAMP/)"
     )
     parser.add_argument(
         "--backend", type=str, choices=["openai", "ollama"], default=None,
@@ -60,7 +79,7 @@ Examples:
     )
     parser.add_argument(
         "--max-iterations", type=int, default=None,
-        help="Max retry iterations (default: from settings.yaml)"
+        help="Max retry iterations per file (default: from settings.yaml)"
     )
     parser.add_argument(
         "--sandbox", type=str, choices=["lua", "docker", "none"], default="lua",
@@ -69,14 +88,32 @@ Examples:
 
     args = parser.parse_args()
 
-    # Resolve task
-    if args.task_file:
-        task = Path(args.task_file).read_text(encoding="utf-8").strip()
-    elif args.task:
-        task = args.task
+    # Validate arguments based on mode
+    if args.mode == "project":
+        # Project mode: need either --spec or --task
+        if not args.spec and not args.task:
+            print("Error: Project mode requires either --spec or --task")
+            parser.print_help()
+            sys.exit(1)
+
+        # Read spec file if provided
+        if args.spec:
+            spec_path = Path(args.spec)
+            if not spec_path.exists():
+                print(f"Error: Spec file not found: {args.spec}")
+                sys.exit(1)
+            task = spec_path.read_text(encoding="utf-8").strip()
+        else:
+            task = args.task
     else:
-        parser.print_help()
-        sys.exit(1)
+        # Quick mode: need either --task-file or --task
+        if args.task_file:
+            task = Path(args.task_file).read_text(encoding="utf-8").strip()
+        elif args.task:
+            task = args.task
+        else:
+            parser.print_help()
+            sys.exit(1)
 
     # Apply overrides
     if args.backend:
@@ -89,24 +126,45 @@ Examples:
         "MAX_ITERATIONS", settings["pipeline"]["max_iterations"]
     ))
 
-    # Session directory
+    # Session directory (different naming for project mode)
     base_dir = args.output or settings["workspace"]["base_dir"]
-    session_dir = make_session_dir(base_dir)
+    if args.mode == "project":
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        session_dir = str(Path(base_dir) / f"project_{timestamp}")
+        Path(session_dir).mkdir(parents=True, exist_ok=True)
+    else:
+        session_dir = make_session_dir(base_dir)
 
-    # Save task
-    (Path(session_dir) / "task.txt").write_text(task, encoding="utf-8")
+    # Save task/spec
+    if args.mode == "project" and args.spec:
+        # Copy original spec file
+        import shutil
+        shutil.copy(args.spec, Path(session_dir) / "requirements.md")
+    else:
+        (Path(session_dir) / "task.txt").write_text(task, encoding="utf-8")
 
+    # Print header
+    mode_name = "Project Mode" if args.mode == "project" else "Quick Mode"
     print(f"\n{'='*60}")
-    print(f"  LocalScript — Multi-Agent Lua Generator")
+    print(f"  LocalScript — {mode_name}")
     print(f"{'='*60}")
     print(f"  Task      : {task[:80]}{'...' if len(task) > 80 else ''}")
     print(f"  Backend   : {os.getenv('LLM_BACKEND', settings['llm']['backend'])}")
     print(f"  Sandbox   : {args.sandbox}")
     print(f"  Max iters : {max_iterations}")
-    print(f"  Session   : {session_dir}")
+    if args.mode == "project":
+        print(f"  Evolutions: {args.evolutions if args.evolutions >= 0 else 'until no improvements'}")
+    print(f"  Output    : {session_dir}")
     print(f"{'='*60}\n")
 
-    # Run pipeline
+    # Route to appropriate pipeline
+    if args.mode == "project":
+        # TODO: Implement project pipeline
+        print("[Project Mode] Not implemented yet - coming soon!")
+        print("Will create: Architect -> Generator -> Decomposer -> Evolver")
+        sys.exit(0)
+
+    # Quick mode - existing pipeline
     from graph.pipeline import run_pipeline
     try:
         final_state = run_pipeline(
@@ -128,7 +186,7 @@ Examples:
             print("  Hint: Rate limit exceeded. Wait and retry.")
         elif "connect" in err.lower() or "timeout" in err.lower():
             print("  Hint: Connection failed. Check your internet.")
-        import sys; sys.exit(1)
+        sys.exit(1)
 
     # Summary
     print(f"\n{'='*60}")
