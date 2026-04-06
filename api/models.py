@@ -10,7 +10,10 @@ from pydantic import BaseModel, Field
 # ── Requests ──────────────────────────────────────────────────────────────────
 
 class RunTaskRequest(BaseModel):
-    task: str = Field(..., min_length=1, max_length=4096, description="Lua task description")
+    task: str = Field(..., min_length=1, max_length=4096, description="Task description or project requirements")
+    mode: str = Field(default="quick", description="Execution mode: 'quick' or 'project'")
+    max_iterations: int = Field(default=3, ge=1, le=10, description="Max retry iterations per file")
+    evolutions: int = Field(default=3, ge=0, le=10, description="Evolution cycles (project mode only)")
 
 
 # ── Responses ─────────────────────────────────────────────────────────────────

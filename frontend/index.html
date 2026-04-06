@@ -59,6 +59,21 @@
         .status-dot-done { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
         .status-dot-pending { background: #eab308; box-shadow: 0 0 8px rgba(234,179,8,0.5); }
         .status-dot-failed { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+        .mode-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #9ca3af;
+        }
+        .mode-btn:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(16,185,129,0.3);
+        }
+        .mode-btn-active {
+            background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.2));
+            border-color: rgba(16,185,129,0.5);
+            color: #10b981;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-[#0a0f1a] text-gray-100 min-h-screen bg-grid">
@@ -94,13 +109,40 @@
                 <h2 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
                     Generate <span class="gradient-text">Lua code</span> with AI agents
                 </h2>
-                <p class="text-gray-400 text-sm max-w-lg mx-auto">
+                <p id="modeDescription" class="text-gray-400 text-sm max-w-lg mx-auto">
                     Describe what you need — three AI agents will generate, validate, and review your Lua code automatically.
                 </p>
             </div>
 
-            <div class="max-w-2xl mx-auto">
-                <div class="glass rounded-2xl p-1.5 border border-white/5 glow-emerald">
+            <div class="max-w-2xl mx-auto space-y-4">
+                <!-- Mode Selector -->
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <button
+                        id="quickModeBtn"
+                        onclick="switchMode('quick')"
+                        class="mode-btn mode-btn-active px-6 py-2 rounded-lg text-sm font-medium transition-all"
+                    >
+                        ⚡ Quick Mode
+                    </button>
+                    <button
+                        id="projectModeBtn"
+                        onclick="switchMode('project')"
+                        class="mode-btn px-6 py-2 rounded-lg text-sm font-medium transition-all"
+                    >
+                        🏗️ Project Mode
+                    </button>
+                </div>
+
+                <!-- Mode Info -->
+                <div class="text-center mb-4">
+                    <p id="modeInfo" class="text-xs text-gray-500">
+                        <span id="quickModeInfo">Single file • Fast iteration • Perfect for functions and scripts</span>
+                        <span id="projectModeInfo" class="hidden">Multi-file • Architecture planning • Evolution cycles</span>
+                    </p>
+                </div>
+
+                <!-- Quick Mode Input -->
+                <div id="quickModeInput" class="glass rounded-2xl p-1.5 border border-white/5 glow-emerald">
                     <div class="flex gap-2">
                         <input
                             id="taskInput"
@@ -121,6 +163,75 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Project Mode Input -->
+                <div id="projectModeInput" class="hidden space-y-3">
+                    <div class="glass rounded-2xl p-5 border border-white/5">
+                        <label class="block text-xs text-gray-400 mb-2">Project Requirements</label>
+                        <textarea
+                            id="projectRequirements"
+                            placeholder="Describe your project requirements...&#10;&#10;Example:&#10;Create an authentication system with:&#10;- User registration&#10;- Login/logout&#10;- Session management&#10;- Password hashing"
+                            class="w-full bg-transparent px-4 py-3 text-sm rounded-xl
+                                   focus:outline-none glow-input placeholder-gray-500 resize-none"
+                            rows="6"
+                        ></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="glass rounded-xl p-4 border border-white/5">
+                            <label class="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                                Max Iterations
+                                <span class="group relative">
+                                    <svg class="w-3 h-3 text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span class="invisible group-hover:visible absolute left-0 top-5 w-48 p-2 text-[10px] bg-gray-900 border border-white/10 rounded-lg shadow-lg z-10">
+                                        Max retry attempts per file if validation fails
+                                    </span>
+                                </span>
+                            </label>
+                            <input
+                                id="maxIterations"
+                                type="number"
+                                value="3"
+                                min="1"
+                                max="10"
+                                class="w-full bg-transparent px-3 py-2 text-sm rounded-lg
+                                       focus:outline-none glow-input border border-white/10"
+                            >
+                        </div>
+                        <div class="glass rounded-xl p-4 border border-white/5">
+                            <label class="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                                Evolution Cycles
+                                <span class="group relative">
+                                    <svg class="w-3 h-3 text-gray-600 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span class="invisible group-hover:visible absolute left-0 top-5 w-48 p-2 text-[10px] bg-gray-900 border border-white/10 rounded-lg shadow-lg z-10">
+                                        Number of improvement iterations after initial generation. 0 = no evolution, just create files.
+                                    </span>
+                                </span>
+                            </label>
+                            <input
+                                id="evolutions"
+                                type="number"
+                                value="3"
+                                min="0"
+                                max="10"
+                                class="w-full bg-transparent px-3 py-2 text-sm rounded-lg
+                                       focus:outline-none glow-input border border-white/10"
+                            >
+                            <p class="text-[10px] text-gray-500 mt-1">0 = no evolution</p>
+                        </div>
+                    </div>
+
+                    <button
+                        id="runProjectBtn"
+                        onclick="runProject()"
+                        class="btn-glow text-white font-medium px-7 py-4 rounded-xl text-sm w-full
+                               flex items-center justify-center gap-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        Create Project
+                    </button>
+                </div>
+
                 <div id="taskError" class="mt-4 text-red-400 text-sm text-center hidden"></div>
                 <div id="taskSuccess" class="mt-4 text-emerald-400 text-sm text-center hidden"></div>
             </div>
@@ -128,7 +239,7 @@
 
         <!-- ── Stats Bar ── -->
         <section class="fade-up stagger-1">
-            <div class="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
+            <div class="grid grid-cols-4 gap-4 max-w-3xl mx-auto">
                 <div class="glass rounded-xl p-4 border border-white/5 text-center">
                     <p id="statTotal" class="text-2xl font-bold gradient-text">—</p>
                     <p class="text-[11px] text-gray-500 mt-1">Total Sessions</p>
@@ -138,8 +249,12 @@
                     <p class="text-[11px] text-gray-500 mt-1">Completed</p>
                 </div>
                 <div class="glass rounded-xl p-4 border border-white/5 text-center">
-                    <p id="statPending" class="text-2xl font-bold text-yellow-400">—</p>
-                    <p class="text-[11px] text-gray-500 mt-1">Pending</p>
+                    <p id="statQuick" class="text-2xl font-bold text-cyan-400">—</p>
+                    <p class="text-[11px] text-gray-500 mt-1">⚡ Quick</p>
+                </div>
+                <div class="glass rounded-xl p-4 border border-white/5 text-center">
+                    <p id="statProject" class="text-2xl font-bold text-violet-400">—</p>
+                    <p class="text-[11px] text-gray-500 mt-1">🏗️ Project</p>
                 </div>
             </div>
         </section>
@@ -228,9 +343,13 @@
                 // Stats
                 const total = sessions.length;
                 const done = sessions.filter(s => s.has_final).length;
+                const quick = sessions.filter(s => s.session_id.startsWith('session_')).length;
+                const project = sessions.filter(s => s.session_id.startsWith('project_')).length;
+
                 document.getElementById('statTotal').textContent = total;
                 document.getElementById('statDone').textContent = done;
-                document.getElementById('statPending').textContent = total - done;
+                document.getElementById('statQuick').textContent = quick;
+                document.getElementById('statProject').textContent = project;
                 document.getElementById('sessionCount').textContent = total;
 
                 if (!sessions.length) {
@@ -247,7 +366,16 @@
                     const dotClass = s.has_final ? 'status-dot-done' : 'status-dot-pending';
                     const statusText = s.has_final ? 'Completed' : 'In Progress';
                     const statusColor = s.has_final ? 'text-emerald-400' : 'text-yellow-400';
-                    const ts = s.session_id.replace('session_', '').replace(/_/g, ' @ ');
+
+                    // Detect mode from session_id prefix
+                    const isProject = s.session_id.startsWith('project_');
+                    const modeIcon = isProject ? '🏗️' : '⚡';
+                    const modeText = isProject ? 'Project' : 'Quick';
+                    const modeBadgeColor = isProject ? 'bg-violet-500/10 text-violet-400' : 'bg-cyan-500/10 text-cyan-400';
+
+                    // Format timestamp
+                    const ts = s.session_id.replace(/^(session_|project_)/, '').replace(/_/g, ' @ ');
+
                     return `
                     <a href="/session/${s.session_id}"
                        class="block glass rounded-xl border border-white/5 card-hover fade-up"
@@ -255,6 +383,9 @@
                         <div class="px-5 py-4 flex items-center gap-4">
                             <div class="status-dot ${dotClass} shrink-0"></div>
                             <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[10px] px-2 py-0.5 rounded ${modeBadgeColor} font-medium">${modeIcon} ${modeText}</span>
+                                </div>
                                 <p class="text-sm text-gray-200 truncate">${escapeHtml(s.task || '(no task)')}</p>
                                 <div class="flex items-center gap-3 mt-1.5">
                                     <span class="text-[11px] font-mono text-gray-500">${ts}</span>

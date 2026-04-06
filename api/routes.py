@@ -140,6 +140,52 @@ async def _run_pipeline_async(
         logger.exception("Pipeline error for session %s", session_id)
 
 
+async def _run_project_pipeline_async(
+    requirements: str,
+    session_id: str,
+    project_dir: str,
+    max_iterations: int,
+    evolutions: int,
+) -> None:
+    """Run the project mode pipeline in a thread and broadcast progress."""
+    from graph.project_pipeline import run_project_pipeline
+
+    _sessions[session_id]["status"] = "running"
+    await _broadcast(session_id, {"event": "started", "session_id": session_id, "mode": "project"})
+
+    loop = asyncio.get_running_loop()
+
+    try:
+        final_state = await loop.run_in_executor(
+            None,
+            lambda: run_project_pipeline(
+                requirements=requirements,
+                project_dir=project_dir,
+                max_iterations=max_iterations,
+                evolutions=evolutions,
+            ),
+        )
+        status = final_state.get("status", "failed")
+        files = final_state.get("files", [])
+
+        _sessions[session_id].update(
+            status=status,
+            files=files,
+        )
+        await _broadcast(session_id, {
+            "event": "completed",
+            "status": status,
+            "files": files,
+        })
+        logger.info("Project session %s finished: status=%s, files=%d", session_id, status, len(files))
+
+    except Exception as exc:
+        error_msg = str(exc)
+        _sessions[session_id].update(status="failed", errors=error_msg)
+        await _broadcast(session_id, {"event": "error", "detail": error_msg})
+        logger.exception("Project pipeline error for session %s", session_id)
+
+
 # ── REST Endpoints ────────────────────────────────────────────────────────────
 
 @router.post(
@@ -151,10 +197,19 @@ async def _run_pipeline_async(
 async def run_task(body: RunTaskRequest):
     from config.loader import load_settings
     settings = load_settings()
-    max_iterations = settings["pipeline"]["max_iterations"]
+    max_iterations = body.max_iterations or settings["pipeline"]["max_iterations"]
 
     workspace = _get_workspace_dir()
-    session_id, session_path = _make_session_dir(workspace)
+
+    # Create session directory based on mode
+    if body.mode == "project":
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        session_id = f"project_{timestamp}"
+        session_path = workspace / session_id
+    else:
+        session_id, session_path = _make_session_dir(workspace)
+
+    session_path.mkdir(parents=True, exist_ok=True)
 
     # Persist task description
     (session_path / "task.txt").write_text(body.task, encoding="utf-8")
@@ -163,21 +218,30 @@ async def run_task(body: RunTaskRequest):
     _sessions[session_id] = {
         "status": "running",
         "task": body.task,
+        "mode": body.mode,
         "iteration": 0,
         "errors": None,
         "ws_clients": [],
     }
 
     # Fire-and-forget pipeline execution
-    asyncio.create_task(
-        _run_pipeline_async(body.task, session_id, str(session_path), max_iterations)
-    )
+    if body.mode == "project":
+        asyncio.create_task(
+            _run_project_pipeline_async(
+                body.task, session_id, str(session_path),
+                max_iterations, body.evolutions
+            )
+        )
+    else:
+        asyncio.create_task(
+            _run_pipeline_async(body.task, session_id, str(session_path), max_iterations)
+        )
 
-    logger.info("Started session %s for task: %s", session_id, body.task[:80])
+    logger.info("Started %s session %s for task: %s", body.mode, session_id, body.task[:80])
     return RunTaskResponse(
         session_id=session_id,
         status="running",
-        message="Pipeline started",
+        message=f"{body.mode.capitalize()} pipeline started",
     )
 
 
@@ -229,11 +293,25 @@ async def list_sessions():
 
     items: list[SessionListItem] = []
     for entry in sorted(workspace.iterdir(), reverse=True):
-        if not entry.is_dir() or not entry.name.startswith("session_"):
+        if not entry.is_dir():
+            continue
+        # Include both session_* and project_* directories
+        if not (entry.name.startswith("session_") or entry.name.startswith("project_")):
             continue
         task_file = entry / "task.txt"
-        task = task_file.read_text(encoding="utf-8").strip() if task_file.exists() else None
-        has_final = (entry / "final.lua").exists()
+        requirements_file = entry / "requirements.md"
+
+        # Try task.txt first, then requirements.md for project mode
+        if task_file.exists():
+            task = task_file.read_text(encoding="utf-8").strip()
+        elif requirements_file.exists():
+            task = requirements_file.read_text(encoding="utf-8").strip()
+        else:
+            task = None
+
+        # For project mode, check if README.md exists (indicates completion)
+        # For quick mode, check final.lua
+        has_final = (entry / "final.lua").exists() or (entry / "README.md").exists()
         items.append(SessionListItem(session_id=entry.name, task=task, has_final=has_final))
 
     return items
