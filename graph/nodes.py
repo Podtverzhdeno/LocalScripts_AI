@@ -30,6 +30,7 @@ def make_nodes(
     llm_validator: BaseChatModel | None = None,
     llm_reviewer: BaseChatModel | None = None,
     node_callback=None,
+    code_callback=None,
 ):
     """
     Factory that returns node functions with LLM injected via closure.
@@ -63,6 +64,11 @@ def make_nodes(
         runner = _get_runner(state)
         runner.save_iteration(code, iteration)
         print(f"\n[Generator] Iteration {iteration} — {len(code)} chars written")
+
+        # Stream code to frontend if callback provided
+        if code_callback:
+            code_callback(code, "generate")
+
         return {
             "code": code,
             "iterations": iteration,

@@ -38,6 +38,7 @@ def build_pipeline(
     llm_validator: BaseChatModel | None = None,
     llm_reviewer: BaseChatModel | None = None,
     node_callback=None,
+    code_callback=None,
 ) -> StateGraph:
     """Build and compile the LangGraph StateGraph with injected LLM(s)."""
     node_generate, node_validate, node_review, node_fail = make_nodes(
@@ -46,6 +47,7 @@ def build_pipeline(
         llm_validator=llm_validator,
         llm_reviewer=llm_reviewer,
         node_callback=node_callback,
+        code_callback=code_callback,
     )
 
     graph = StateGraph(AgentState)
@@ -79,12 +81,14 @@ def run_pipeline(
     max_iterations: int = 3,
     llm: BaseChatModel | None = None,
     node_callback=None,
+    code_callback=None,
 ) -> AgentState:
     """
     Entry point. If llm is None, loads from settings.yaml.
     Supports per-agent LLM overrides via config/settings.yaml `agents:` section.
     Accepts external llm for testing without API keys.
     Accepts node_callback for real-time progress updates.
+    Accepts code_callback for streaming code generation.
     """
     from llm.factory import get_llm
 
@@ -104,6 +108,7 @@ def run_pipeline(
         llm_validator=llm_validator,
         llm_reviewer=llm_reviewer,
         node_callback=node_callback,
+        code_callback=code_callback,
     )
 
     initial_state: AgentState = {

@@ -77,6 +77,21 @@ async def _broadcast(session_id: str, event: dict) -> None:
         clients.remove(ws)
 
 
+def _make_streaming_callback(session_id: str, loop):
+    """Create a callback that streams LLM tokens via WebSocket."""
+    def on_llm_new_token(token: str, **kwargs):
+        """Called by LangChain when a new token is generated."""
+        asyncio.run_coroutine_threadsafe(
+            _broadcast(session_id, {
+                "event": "token",
+                "token": token,
+                "agent": kwargs.get("agent", "unknown"),
+            }),
+            loop
+        )
+    return on_llm_new_token
+
+
 # ── Pipeline runner (async wrapper) ──────────────────────────────────────────
 
 async def _run_pipeline_async(
@@ -101,11 +116,30 @@ async def _run_pipeline_async(
             _broadcast(session_id, {
                 "event": "node_enter",
                 "node": node_name,
+                "agent": node_name,  # generator, validate, review
                 "iteration": iteration,
                 "status": state.get("status", "unknown"),
             }),
             loop
         )
+
+    # Code streaming callback - simulates token streaming by sending code in chunks
+    def code_callback(code: str, agent: str):
+        """Called after code generation to simulate streaming."""
+        chunk_size = 10  # characters per chunk
+        for i in range(0, len(code), chunk_size):
+            chunk = code[i:i+chunk_size]
+            asyncio.run_coroutine_threadsafe(
+                _broadcast(session_id, {
+                    "event": "token",
+                    "token": chunk,
+                    "agent": agent,
+                }),
+                loop
+            )
+            # Small delay to simulate streaming
+            import time
+            time.sleep(0.01)
 
     try:
         final_state = await loop.run_in_executor(
@@ -115,6 +149,7 @@ async def _run_pipeline_async(
                 session_dir=session_dir,
                 max_iterations=max_iterations,
                 node_callback=node_callback,
+                code_callback=code_callback,
             ),
         )
         status = final_state.get("status", "failed")

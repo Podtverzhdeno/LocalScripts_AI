@@ -62,6 +62,7 @@
 
         /* Smooth transitions */
         .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
     </style>
 </head>
 <body class="bg-[#0a0f1a] text-gray-100 min-h-screen bg-grid">
@@ -96,6 +97,10 @@
                         <span class="text-xs text-gray-500">Click nodes to view logs</span>
                     </div>
                     <div class="flex items-center gap-3">
+                        <button onclick="showInferenceViewer()" class="text-xs text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            Live Inference
+                        </button>
                         <button onclick="showExecutionTimeline()" class="text-xs text-gray-500 hover:text-cyan-400 transition-colors flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Timeline
@@ -123,6 +128,77 @@
                     </button>
                 </div>
                 <div id="timelineContent" class="px-6 py-4 overflow-y-auto max-h-[60vh]"></div>
+            </div>
+        </div>
+
+        <!-- ── Real-Time Inference Viewer ── -->
+        <div id="inferenceModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div class="glass rounded-2xl border border-white/5 max-w-4xl w-full max-h-[85vh] overflow-hidden">
+                <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <h3 class="font-semibold">Real-Time Inference</h3>
+                        <span id="inferenceAgent" class="text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 font-medium">—</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="clearInference()" class="text-xs text-gray-500 hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Clear
+                        </button>
+                        <button onclick="hideInferenceViewer()" class="text-gray-500 hover:text-gray-300 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <!-- Current Agent Status -->
+                    <div class="glass rounded-xl border border-white/5 p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs text-gray-500 uppercase tracking-wider">Current Agent</span>
+                            <span id="inferenceIteration" class="text-xs font-mono text-gray-500">Iteration: —</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="inferenceAgentIcon" class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-2xl">⚡</div>
+                            <div class="flex-1">
+                                <p id="inferenceAgentName" class="text-lg font-semibold text-emerald-400">Waiting...</p>
+                                <p id="inferenceAgentDesc" class="text-xs text-gray-500 mt-0.5">Pipeline will start soon</p>
+                            </div>
+                            <div id="inferenceSpinner" class="hidden">
+                                <svg class="w-6 h-6 text-emerald-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Token Stream -->
+                    <div class="glass rounded-xl border border-white/5 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                            <span class="text-xs text-gray-500 uppercase tracking-wider">Generated Output</span>
+                            <div class="flex items-center gap-2">
+                                <span id="tokenCount" class="text-xs font-mono text-gray-500">0 tokens</span>
+                                <div id="streamingIndicator" class="hidden w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div id="inferenceOutput" class="px-4 py-4 font-mono text-sm text-gray-300 max-h-[400px] overflow-y-auto leading-relaxed bg-[#0a0f1a]/50">
+                            <span class="text-gray-600">Waiting for generation...</span>
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="glass rounded-xl border border-white/5 p-3 text-center">
+                            <p id="inferenceTokensPerSec" class="text-lg font-bold text-cyan-400">—</p>
+                            <p class="text-[10px] text-gray-500 mt-1">Tokens/sec</p>
+                        </div>
+                        <div class="glass rounded-xl border border-white/5 p-3 text-center">
+                            <p id="inferenceElapsed" class="text-lg font-bold text-violet-400">—</p>
+                            <p class="text-[10px] text-gray-500 mt-1">Elapsed</p>
+                        </div>
+                        <div class="glass rounded-xl border border-white/5 p-3 text-center">
+                            <p id="inferenceChars" class="text-lg font-bold text-emerald-400">—</p>
+                            <p class="text-[10px] text-gray-500 mt-1">Characters</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -475,13 +551,22 @@
                     const msg = JSON.parse(evt.data);
                     appendLog(logEl, `[${msg.event}] iter=${msg.iteration || '—'} status=${msg.status || '—'}`);
 
+                    // Handle token streaming
+                    if (msg.event === 'token') {
+                        appendInferenceToken(msg.token);
+                    }
                     // Handle graph updates
-                    if (msg.event === 'node_enter') {
+                    else if (msg.event === 'node_enter') {
                         pipelineGraph.setActiveNode(msg.node, msg.iteration);
+                        // Update inference viewer with current agent
+                        if (msg.agent) {
+                            updateInferenceAgent(msg.agent, msg.iteration);
+                        }
                     } else if (msg.event === 'progress' || msg.event === 'status') {
                         document.getElementById('iterationText').textContent = msg.iteration;
                         loadFiles();
                     } else if (msg.event === 'completed' || msg.event === 'finished') {
+                        stopInferenceStreaming();
                         if (msg.status === 'done') {
                             pipelineGraph.setActiveNode('end', msg.iteration);
                         } else if (msg.status === 'failed') {
@@ -596,6 +681,114 @@
 
         function hideExecutionTimeline() {
             document.getElementById('timelineModal').classList.add('hidden');
+        }
+
+        // ── Inference Viewer ──
+        let inferenceState = {
+            tokens: [],
+            startTime: null,
+            currentAgent: null,
+            tokenCount: 0,
+        };
+
+        function showInferenceViewer() {
+            document.getElementById('inferenceModal').classList.remove('hidden');
+        }
+
+        function hideInferenceViewer() {
+            document.getElementById('inferenceModal').classList.add('hidden');
+        }
+
+        function clearInference() {
+            inferenceState.tokens = [];
+            inferenceState.tokenCount = 0;
+            inferenceState.startTime = null;
+            document.getElementById('inferenceOutput').innerHTML = '<span class="text-gray-600">Cleared. Waiting for new generation...</span>';
+            document.getElementById('tokenCount').textContent = '0 tokens';
+            document.getElementById('inferenceTokensPerSec').textContent = '—';
+            document.getElementById('inferenceElapsed').textContent = '—';
+            document.getElementById('inferenceChars').textContent = '—';
+        }
+
+        function updateInferenceAgent(agent, iteration) {
+            inferenceState.currentAgent = agent;
+            inferenceState.startTime = Date.now();
+            inferenceState.tokens = [];
+            inferenceState.tokenCount = 0;
+
+            const agentData = {
+                generate: {
+                    name: 'Generator',
+                    desc: 'Writing Lua code',
+                    icon: '✍️',
+                    color: 'emerald'
+                },
+                validate: {
+                    name: 'Validator',
+                    desc: 'Compiling and executing',
+                    icon: '🔍',
+                    color: 'cyan'
+                },
+                review: {
+                    name: 'Reviewer',
+                    desc: 'Checking code quality',
+                    icon: '👁️',
+                    color: 'violet'
+                }
+            };
+
+            const data = agentData[agent] || { name: agent, desc: 'Processing', icon: '⚡', color: 'gray' };
+
+            document.getElementById('inferenceAgent').textContent = data.name;
+            document.getElementById('inferenceAgentName').textContent = data.name;
+            document.getElementById('inferenceAgentDesc').textContent = data.desc;
+            document.getElementById('inferenceAgentIcon').textContent = data.icon;
+            document.getElementById('inferenceIteration').textContent = `Iteration: ${iteration}`;
+            document.getElementById('inferenceSpinner').classList.remove('hidden');
+            document.getElementById('streamingIndicator').classList.remove('hidden');
+
+            // Clear output for new agent
+            document.getElementById('inferenceOutput').innerHTML = '<span class="text-gray-500">Generating...</span>';
+        }
+
+        function appendInferenceToken(token) {
+            if (!inferenceState.startTime) {
+                inferenceState.startTime = Date.now();
+            }
+
+            inferenceState.tokens.push(token);
+            inferenceState.tokenCount++;
+
+            const outputEl = document.getElementById('inferenceOutput');
+
+            // If first token, clear placeholder
+            if (inferenceState.tokenCount === 1) {
+                outputEl.textContent = '';
+            }
+
+            // Append token
+            const span = document.createElement('span');
+            span.textContent = token;
+            span.className = 'inline-block animate-fadeIn';
+            outputEl.appendChild(span);
+
+            // Auto-scroll
+            outputEl.scrollTop = outputEl.scrollHeight;
+
+            // Update stats
+            const elapsed = (Date.now() - inferenceState.startTime) / 1000;
+            const tokensPerSec = inferenceState.tokenCount / elapsed;
+            const totalChars = inferenceState.tokens.join('').length;
+
+            document.getElementById('tokenCount').textContent = `${inferenceState.tokenCount} tokens`;
+            document.getElementById('inferenceTokensPerSec').textContent = tokensPerSec.toFixed(1);
+            document.getElementById('inferenceElapsed').textContent = `${elapsed.toFixed(1)}s`;
+            document.getElementById('inferenceChars').textContent = totalChars;
+        }
+
+        function stopInferenceStreaming() {
+            document.getElementById('inferenceSpinner').classList.add('hidden');
+            document.getElementById('streamingIndicator').classList.add('hidden');
         }
 
         // ── Init ──
