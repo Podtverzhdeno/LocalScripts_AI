@@ -27,10 +27,29 @@ def is_docker_running():
         return False
 
 
+def is_docker_image_built():
+    """Check if sandbox image is built."""
+    if not is_docker_running():
+        return False
+    try:
+        result = subprocess.run(
+            ["docker", "images", "-q", "localscript-lua-sandbox"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return bool(result.stdout.strip())
+    except:
+        return False
+
+
+DOCKER_IMAGE_AVAILABLE = is_docker_image_built()
+
+
 @pytest.fixture
 def docker_runner():
-    if not is_docker_running():
-        pytest.skip("Docker not running")
+    if not DOCKER_IMAGE_AVAILABLE:
+        pytest.skip("Docker image not built. Run: make docker-sandbox-build")
     with tempfile.TemporaryDirectory() as d:
         config = DockerConfig(timeout=5)
         yield DockerLuaRunner(session_dir=d, config=config)
