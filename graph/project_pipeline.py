@@ -3,9 +3,11 @@ Project Mode Pipeline — orchestrates multi-file project generation with evolut
 
 Phases:
 1. Architect: plan project structure
-2. Generator: create files according to plan
-3. Decomposer: analyze code and create manifest
-4. Evolver: find improvements and iterate (optional)
+2. Specification: create detailed specs for each file
+3. Generator: create files according to specs
+4. Integrator: test that all files work together
+5. Decomposer: analyze code and create manifest
+6. Evolver: find improvements and iterate (optional)
 """
 
 from pathlib import Path
@@ -13,9 +15,11 @@ from typing import Optional
 import json
 
 from agents.architect import ArchitectAgent
+from agents.specification import SpecificationAgent
 from agents.generator import GeneratorAgent
 from agents.validator import ValidatorAgent
 from agents.reviewer import ReviewerAgent
+from agents.integrator import IntegratorAgent
 from agents.decomposer import DecomposerAgent
 from agents.evolver import EvolverAgent
 from llm.factory import get_llm
@@ -69,7 +73,31 @@ def run_project_pipeline(
     )
 
     print("\n" + "="*60)
-    print("  PHASE 2: Code Generation")
+    print("  PHASE 2: Specification Creation")
+    print("="*60)
+
+    # Phase 2: Create detailed specifications for each file
+    specification_agent = SpecificationAgent(get_llm("specification"))
+    file_specs = {}
+    existing_files = {}
+
+    for file_name in plan['order']:
+        file_info = next((f for f in plan['files'] if f['name'] == file_name), None)
+        if not file_info:
+            continue
+
+        print(f"\n[Specification] Creating spec for {file_name}...")
+        spec = specification_agent.create_spec(file_info, plan, existing_files)
+        file_specs[file_name] = spec
+
+        # Save spec
+        spec_path = project_path / f"{file_name}.spec.json"
+        spec_path.write_text(json.dumps(spec, indent=2), encoding="utf-8")
+        print(f"  Functions: {len(spec.get('functions', []))}")
+        print(f"  Edge cases: {len(spec.get('edge_cases', []))}")
+
+    print("\n" + "="*60)
+    print("  PHASE 3: Code Generation")
     print("="*60)
 
     # Notify frontend: decomposer node
@@ -105,16 +133,36 @@ def run_project_pipeline(
         if node_callback:
             node_callback("generate", {"iteration": len(generated_files) + 1})
 
-        # Find file info from plan
+        # Find file info and spec
         file_info = next((f for f in plan['files'] if f['name'] == file_name), None)
         if not file_info:
             print(f"  Warning: {file_name} not in plan, skipping")
             continue
 
-        # Build task description
-        task = f"Create {file_name}: {file_info['purpose']}\n"
-        if file_info['dependencies']:
-            task += f"Dependencies: {', '.join(file_info['dependencies'])}\n"
+        spec = file_specs.get(file_name, {})
+
+        # Build enhanced task description with specification
+        task = f"Create {file_name}: {file_info['purpose']}\n\n"
+
+        if spec.get('functions'):
+            task += "Required functions:\n"
+            for func in spec['functions']:
+                params = ', '.join(func.get('params', []))
+                task += f"  - {func['name']}({params}) -> {func.get('returns', 'void')}\n"
+                task += f"    {func.get('description', '')}\n"
+            task += "\n"
+
+        if spec.get('dependencies_api'):
+            task += "Available from dependencies:\n"
+            for dep, apis in spec['dependencies_api'].items():
+                task += f"  {dep}: {', '.join(apis)}\n"
+            task += "\n"
+
+        if spec.get('edge_cases'):
+            task += f"Handle edge cases: {', '.join(spec['edge_cases'])}\n\n"
+
+        if spec.get('example_usage'):
+            task += f"Example usage:\n{spec['example_usage']}\n"
 
         # Retry loop with max_iterations
         code = None
@@ -196,6 +244,7 @@ def run_project_pipeline(
             file_path = src_dir / file_name
             file_path.write_text(code, encoding="utf-8")
             generated_files.append(file_name)
+            existing_files[file_name] = code  # Add to context for next files
             print(f"  [SUCCESS] Saved {file_name}")
 
             # Store metrics
@@ -222,6 +271,39 @@ def run_project_pipeline(
             "error": "No files generated"
         }
 
+    # PHASE 3.5: Integration Testing (NEW!)
+    print("\n" + "="*60)
+    print("  PHASE 3.5: Integration Testing")
+    print("="*60)
+
+    integrator = IntegratorAgent(get_llm("integrator"), _get_runner(project_path))
+
+    # Build files dict for integrator
+    files_dict = {}
+    for file_name in generated_files:
+        file_path = src_dir / file_name
+        if file_path.exists():
+            files_dict[file_name] = file_path.read_text(encoding="utf-8")
+
+    integration_result = integrator.test_integration(files_dict, plan, project_path)
+
+    if integration_result["success"]:
+        print("[Integrator] ✓ All modules integrated successfully")
+    else:
+        print(f"[Integrator] ✗ Found {len(integration_result['issues'])} integration issues:")
+        for issue in integration_result['issues']:
+            print(f"  - {issue['file']}: {issue['problem']}")
+
+    # Save integration report
+    integration_report_path = project_path / "integration_report.json"
+    integration_report_path.write_text(
+        json.dumps(integration_result, indent=2), encoding="utf-8"
+    )
+
+    print("\n" + "="*60)
+    print("  PHASE 4: Code Analysis")
+    print("="*60)
+
     decomposer = DecomposerAgent(get_llm("decomposer"))
     manifest = decomposer.analyze(project_path, generated_files)
 
@@ -239,7 +321,7 @@ def run_project_pipeline(
     # Phase 4: Evolution (if requested and we have files)
     if evolutions > 0 and generated_files:
         print("\n" + "="*60)
-        print(f"  PHASE 4: Evolution ({evolutions} cycles)")
+        print(f"  PHASE 5: Evolution ({evolutions} cycles)")
         print("="*60)
 
         # Notify frontend: evolver node
@@ -284,6 +366,7 @@ def run_project_pipeline(
         "status": "done",
         "files": generated_files,
         "manifest": manifest,
+        "integration": integration_result,
         "project_dir": str(project_path)
     }
 

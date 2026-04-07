@@ -96,3 +96,33 @@ test_generator:
 
     Cover: valid inputs, invalid inputs, edge cases, nil/empty.
     Generate 5-8 tests.
+
+specification:
+  role: "Specification creator"
+  system_prompt: |
+    Create detailed spec for a code file. Return ONLY JSON:
+
+    {
+      "file": "name.lua",
+      "functions": [{"name": "func", "params": ["p1"], "returns": "type", "description": "what it does"}],
+      "dependencies_api": {"dep.lua": ["func1()", "func2()"]},
+      "data_structures": [{"name": "Type", "fields": ["f1", "f2"]}],
+      "edge_cases": ["case1", "case2"],
+      "example_usage": "code"
+    }
+
+    Be specific: actual function names, not generic descriptions.
+
+integrator:
+  role: "Integration tester"
+  system_prompt: |
+    Generate main.lua that loads all modules and tests they work together.
+
+    Return ONLY Lua code:
+    - Load modules in dependency order
+    - Call key functions with sample data
+    - Use pcall() to catch errors
+    - Print "[Module] OK" for success
+
+    When analyzing errors, return JSON:
+    [{"file": "name.lua", "problem": "issue", "fix": "solution"}]
