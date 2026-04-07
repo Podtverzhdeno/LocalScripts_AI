@@ -16,11 +16,11 @@ class PipelineGraph {
         // Quick mode: Generator → Validator → Reviewer
         this.quickNodes = [
             { id: 'start', label: 'START', x: 80, y: 250, type: 'start' },
-            { id: 'generate', label: 'Generator', x: 300, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
-            { id: 'validate', label: 'Validator', x: 500, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
-            { id: 'review', label: 'Reviewer', x: 700, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
-            { id: 'fail', label: 'FAIL', x: 500, y: 400, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 840, y: 250, type: 'end', color: '#10b981' }
+            { id: 'generate', label: 'Generator', x: 280, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
+            { id: 'review', label: 'Reviewer', x: 680, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'fail', label: 'FAIL', x: 480, y: 400, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 820, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.quickEdges = [
@@ -36,12 +36,12 @@ class PipelineGraph {
         // Project mode: Architect → Decomposer → Generator → Validator → Reviewer → Evolver
         this.projectNodes = [
             { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
-            { id: 'architect', label: 'Architect', x: 180, y: 150, type: 'agent', agent: 'architect', desc: 'Designs system architecture' },
-            { id: 'decomposer', label: 'Decomposer', x: 180, y: 350, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks' },
-            { id: 'generate', label: 'Generator', x: 350, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
-            { id: 'validate', label: 'Validator', x: 520, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
-            { id: 'review', label: 'Reviewer', x: 690, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
-            { id: 'evolver', label: 'Evolver', x: 800, y: 150, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines' },
+            { id: 'architect', label: 'Architect', x: 180, y: 150, type: 'agent', agent: 'architect', desc: 'Designs system architecture', color: '#06b6d4' },
+            { id: 'decomposer', label: 'Decomposer', x: 180, y: 350, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks', color: '#a855f7' },
+            { id: 'generate', label: 'Generator', x: 350, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'validate', label: 'Validator', x: 520, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
+            { id: 'review', label: 'Reviewer', x: 690, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'evolver', label: 'Evolver', x: 800, y: 150, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
             { id: 'fail', label: 'FAIL', x: 520, y: 420, type: 'end', color: '#ef4444' },
             { id: 'end', label: 'SUCCESS', x: 860, y: 250, type: 'end', color: '#10b981' }
         ];
@@ -255,43 +255,46 @@ class PipelineGraph {
 
         if (!from || !to) return '';
 
-        const nodeRadius = 45; // Updated to match new node size
-        const startRadius = (from.type === 'start' || from.type === 'end') ? 24 : nodeRadius;
-        const endRadius = (to.type === 'start' || to.type === 'end') ? 24 : nodeRadius;
+        // Card dimensions: width=120, height=70, so half-width=60, half-height=35
+        const cardHalfWidth = 60;
+        const circleRadius = 24;
+
+        const fromRadius = (from.type === 'start' || from.type === 'end') ? circleRadius : cardHalfWidth;
+        const toRadius = (to.type === 'start' || to.type === 'end') ? circleRadius : cardHalfWidth;
 
         if (edge.curve) {
             // Curved path for feedback loops
             const midX = (from.x + to.x) / 2;
             const midY = from.y + 130;
-            return `M ${from.x + startRadius} ${from.y} Q ${midX} ${midY} ${to.x - endRadius} ${to.y}`;
+            return `M ${from.x + fromRadius} ${from.y} Q ${midX} ${midY} ${to.x - toRadius} ${to.y}`;
         }
 
         if (edge.from === 'validate' && edge.to === 'fail') {
             // Downward path
-            return `M ${from.x} ${from.y + nodeRadius} L ${to.x} ${to.y - 24}`;
+            return `M ${from.x} ${from.y + 35} L ${to.x} ${to.y - circleRadius}`;
         }
 
         // For project mode: handle architect/decomposer to generator
         if ((edge.from === 'architect' || edge.from === 'decomposer') && edge.to === 'generate') {
-            return `M ${from.x + startRadius} ${from.y} L ${to.x - endRadius} ${to.y}`;
+            return `M ${from.x + fromRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
         }
 
         // For project mode: handle review to evolver
         if (edge.from === 'review' && edge.to === 'evolver') {
-            return `M ${from.x + startRadius/2} ${from.y - startRadius/2} L ${to.x - endRadius/2} ${to.y + endRadius/2}`;
+            return `M ${from.x + fromRadius/2} ${from.y - 35} L ${to.x - toRadius/2} ${to.y + 35}`;
         }
 
         // For project mode: handle evolver to end
         if (edge.from === 'evolver' && edge.to === 'end') {
-            return `M ${from.x + startRadius/2} ${from.y + startRadius/2} L ${to.x - 24} ${to.y}`;
+            return `M ${from.x + fromRadius/2} ${from.y + 35} L ${to.x - circleRadius} ${to.y}`;
         }
 
         // For project mode: handle start to architect/decomposer
         if (edge.from === 'start' && (edge.to === 'architect' || edge.to === 'decomposer')) {
-            return `M ${from.x + 24} ${from.y} L ${to.x - endRadius} ${to.y}`;
+            return `M ${from.x + circleRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
         }
 
-        return `M ${from.x + startRadius} ${from.y} L ${to.x - endRadius} ${to.y}`;
+        return `M ${from.x + fromRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
     }
 
     getEdgeLabelPos(edge) {
@@ -352,58 +355,67 @@ class PipelineGraph {
                 self.hideTooltip();
             });
 
-        // Node background (larger circle for hover effect)
-        nodeEnter.append('circle')
-            .attr('r', d => d.type === 'start' || d.type === 'end' ? 28 : 50)
-            .attr('class', 'node-bg')
-            .attr('fill', 'transparent')
-            .attr('stroke', 'none');
-
-        // Node circles
-        nodeEnter.append('circle')
-            .attr('r', d => d.type === 'start' || d.type === 'end' ? 24 : 45)
-            .attr('class', 'node-circle')
-            .attr('fill', d => this.getNodeColor(d))
-            .attr('stroke', d => d.color || 'rgba(255,255,255,0.2)')
+        // Draw agent nodes as rounded rectangles (cards)
+        nodeEnter.filter(d => d.type === 'agent')
+            .append('rect')
+            .attr('class', 'node-card')
+            .attr('x', -60)
+            .attr('y', -35)
+            .attr('width', 120)
+            .attr('height', 70)
+            .attr('rx', 12)
+            .attr('ry', 12)
+            .attr('fill', d => `${d.color}15`)
+            .attr('stroke', d => d.color)
             .attr('stroke-width', 2);
 
-        // Node labels
-        nodeEnter.append('text')
+        // Agent labels
+        nodeEnter.filter(d => d.type === 'agent')
+            .append('text')
             .attr('text-anchor', 'middle')
-            .attr('dy', d => d.type === 'agent' ? -10 : 5)
-            .style('font-size', d => d.type === 'agent' ? '14px' : '12px')
+            .attr('dy', 5)
+            .style('font-size', '13px')
+            .style('font-weight', '600')
+            .style('fill', '#fff')
+            .style('pointer-events', 'none')
+            .text(d => d.label);
+
+        // Start/End nodes as circles
+        nodeEnter.filter(d => d.type === 'start' || d.type === 'end')
+            .append('circle')
+            .attr('r', 24)
+            .attr('class', 'node-circle')
+            .attr('fill', d => d.color ? `${d.color}20` : 'rgba(107, 114, 128, 0.3)')
+            .attr('stroke', d => d.color || 'rgba(255,255,255,0.3)')
+            .attr('stroke-width', 2);
+
+        // Start/End labels
+        nodeEnter.filter(d => d.type === 'start' || d.type === 'end')
+            .append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dy', 5)
+            .style('font-size', '11px')
             .style('font-weight', '700')
             .style('fill', '#fff')
             .style('pointer-events', 'none')
             .text(d => d.label);
 
-        // Agent icons
-        nodeEnter.filter(d => d.type === 'agent')
-            .append('text')
-            .attr('text-anchor', 'middle')
-            .attr('dy', 20)
-            .style('font-size', '28px')
-            .style('font-weight', '700')
-            .style('fill', 'rgba(16, 185, 129, 0.8)')
-            .style('pointer-events', 'none')
-            .text(d => this.getAgentIcon(d.agent));
-
         // Execution count badge
         nodeEnter.filter(d => d.type === 'agent')
             .append('g')
             .attr('class', 'exec-count')
-            .attr('transform', 'translate(35, -35)')
+            .attr('transform', 'translate(50, -25)')
             .style('opacity', 0)
             .call(g => {
                 g.append('circle')
-                    .attr('r', 14)
+                    .attr('r', 12)
                     .attr('fill', '#10b981')
                     .attr('stroke', 'rgba(15, 23, 42, 0.9)')
                     .attr('stroke-width', 2);
                 g.append('text')
                     .attr('text-anchor', 'middle')
-                    .attr('dy', 5)
-                    .style('font-size', '11px')
+                    .attr('dy', 4)
+                    .style('font-size', '10px')
                     .style('font-weight', '700')
                     .style('fill', '#fff')
                     .style('pointer-events', 'none')
@@ -414,8 +426,8 @@ class PipelineGraph {
         nodeEnter.append('circle')
             .attr('class', 'status-indicator')
             .attr('r', 0)
-            .attr('cx', -35)
-            .attr('cy', -35)
+            .attr('cx', -50)
+            .attr('cy', -25)
             .attr('fill', '#10b981')
             .style('opacity', 0);
     }
@@ -513,8 +525,13 @@ class PipelineGraph {
         this.statusText.text(`Status: ${statusMap[nodeId] || 'Running'}`);
 
         // Reset all nodes
+        this.nodeGroup.selectAll('.node-card')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 2)
+            .style('filter', 'none');
+
         this.nodeGroup.selectAll('.node-circle')
-            .attr('stroke', d => d.color || 'rgba(255,255,255,0.2)')
+            .attr('stroke', d => d.color || 'rgba(255,255,255,0.3)')
             .attr('stroke-width', 2)
             .style('filter', 'none');
 
@@ -540,24 +557,31 @@ class PipelineGraph {
             const isEndNode = nodeData && nodeData.type === 'end';
             const glowFilter = nodeId === 'fail' ? 'url(#glow-red)' : 'url(#glow-green)';
 
-            this.nodeGroup.select(`.node-${nodeId} .node-circle`)
-                .attr('stroke', nodeId === 'fail' ? '#ef4444' : '#10b981')
-                .attr('stroke-width', 3)
-                .style('filter', isEndNode ? glowFilter : 'url(#glow-green)')
-                .transition()
-                .duration(300)
-                .attr('r', d => {
-                    if (d.type === 'agent') return 48;
-                    if (d.type === 'end') return 27;
-                    return 26;
-                })
-                .transition()
-                .duration(300)
-                .attr('r', d => {
-                    if (d.type === 'agent') return 45;
-                    if (d.type === 'end') return 24;
-                    return 24;
-                });
+            if (nodeData && nodeData.type === 'agent') {
+                // Highlight card
+                this.nodeGroup.select(`.node-${nodeId} .node-card`)
+                    .attr('stroke', nodeId === 'fail' ? '#ef4444' : nodeData.color)
+                    .attr('stroke-width', 3)
+                    .style('filter', 'url(#glow-green)')
+                    .transition()
+                    .duration(200)
+                    .attr('stroke-width', 4)
+                    .transition()
+                    .duration(200)
+                    .attr('stroke-width', 3);
+            } else if (nodeData) {
+                // Highlight circle (start/end)
+                this.nodeGroup.select(`.node-${nodeId} .node-circle`)
+                    .attr('stroke', nodeId === 'fail' ? '#ef4444' : '#10b981')
+                    .attr('stroke-width', 3)
+                    .style('filter', isEndNode ? glowFilter : 'url(#glow-green)')
+                    .transition()
+                    .duration(300)
+                    .attr('r', 27)
+                    .transition()
+                    .duration(300)
+                    .attr('r', 24);
+            }
 
             // Pulsing indicator
             this.nodeGroup.select(`.node-${nodeId} .status-indicator`)
@@ -630,8 +654,13 @@ class PipelineGraph {
         this.statusText.text('Status: Idle');
         this.timeText.text('Time: 0s');
 
+        this.nodeGroup.selectAll('.node-card')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 2)
+            .style('filter', 'none');
+
         this.nodeGroup.selectAll('.node-circle')
-            .attr('stroke', d => d.color || 'rgba(255,255,255,0.2)')
+            .attr('stroke', d => d.color || 'rgba(255,255,255,0.3)')
             .attr('stroke-width', 2)
             .style('filter', 'none');
 
@@ -646,11 +675,11 @@ class PipelineGraph {
 
         this.edgeGroup.selectAll('path')
             .attr('stroke', d => {
-                if (d.type === 'retry') return 'rgba(234, 179, 8, 0.15)';
-                if (d.type === 'fail') return 'rgba(239, 68, 68, 0.15)';
-                return 'rgba(255,255,255,0.1)';
+                if (d.type === 'retry') return 'rgba(234, 179, 8, 0.3)';
+                if (d.type === 'fail') return 'rgba(239, 68, 68, 0.3)';
+                return 'rgba(255,255,255,0.2)';
             })
-            .attr('stroke-width', 2)
+            .attr('stroke-width', 3)
             .attr('marker-end', 'url(#arrow)');
     }
 
