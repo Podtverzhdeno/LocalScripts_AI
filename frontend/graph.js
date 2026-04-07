@@ -33,32 +33,35 @@ class PipelineGraph {
             { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' }
         ];
 
-        // Project mode: Architect → Decomposer → Generator → Validator → Reviewer → Evolver
+        // Project mode: Architect → Specification → Generator → Validator → Reviewer → Integrator → Decomposer → Evolver
         this.projectNodes = [
             { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
-            { id: 'architect', label: 'Architect', x: 180, y: 150, type: 'agent', agent: 'architect', desc: 'Designs system architecture', color: '#06b6d4' },
-            { id: 'decomposer', label: 'Decomposer', x: 180, y: 350, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks', color: '#a855f7' },
-            { id: 'generate', label: 'Generator', x: 350, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'architect', label: 'Architect', x: 160, y: 250, type: 'agent', agent: 'architect', desc: 'Plans project structure', color: '#06b6d4' },
+            { id: 'specification', label: 'Specification', x: 280, y: 250, type: 'agent', agent: 'specification', desc: 'Creates detailed specs', color: '#ec4899' },
+            { id: 'generate', label: 'Generator', x: 400, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
             { id: 'validate', label: 'Validator', x: 520, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'review', label: 'Reviewer', x: 690, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'evolver', label: 'Evolver', x: 800, y: 150, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
+            { id: 'review', label: 'Reviewer', x: 640, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'integrator', label: 'Integrator', x: 760, y: 250, type: 'agent', agent: 'integrator', desc: 'Tests integration', color: '#f97316' },
+            { id: 'decomposer', label: 'Decomposer', x: 840, y: 150, type: 'agent', agent: 'decomposer', desc: 'Analyzes code', color: '#a855f7' },
+            { id: 'evolver', label: 'Evolver', x: 840, y: 350, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
             { id: 'fail', label: 'FAIL', x: 520, y: 420, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 860, y: 250, type: 'end', color: '#10b981' }
+            { id: 'end', label: 'SUCCESS', x: 920, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.projectEdges = [
             { from: 'start', to: 'architect', label: '' },
-            { from: 'start', to: 'decomposer', label: '' },
-            { from: 'architect', to: 'generate', label: '' },
-            { from: 'decomposer', to: 'generate', label: '' },
+            { from: 'architect', to: 'specification', label: '' },
+            { from: 'specification', to: 'generate', label: '' },
             { from: 'generate', to: 'validate', label: '' },
             { from: 'validate', to: 'review', label: 'OK' },
             { from: 'validate', to: 'generate', label: 'errors', curve: true, type: 'retry' },
             { from: 'validate', to: 'fail', label: 'max iter', type: 'fail' },
-            { from: 'review', to: 'evolver', label: 'optimize' },
-            { from: 'review', to: 'end', label: 'done' },
-            { from: 'evolver', to: 'end', label: '' },
-            { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' }
+            { from: 'review', to: 'integrator', label: 'approved' },
+            { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' },
+            { from: 'integrator', to: 'decomposer', label: 'OK' },
+            { from: 'integrator', to: 'evolver', label: 'OK' },
+            { from: 'decomposer', to: 'end', label: '' },
+            { from: 'evolver', to: 'end', label: '' }
         ];
 
         this.nodes = this.mode === 'project' ? this.projectNodes : this.quickNodes;
@@ -274,24 +277,39 @@ class PipelineGraph {
             return `M ${from.x} ${from.y + 35} L ${to.x} ${to.y - circleRadius}`;
         }
 
-        // For project mode: handle architect/decomposer to generator
-        if ((edge.from === 'architect' || edge.from === 'decomposer') && edge.to === 'generate') {
+        // For project mode: handle architect to specification
+        if (edge.from === 'architect' && edge.to === 'specification') {
             return `M ${from.x + fromRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
         }
 
-        // For project mode: handle review to evolver
-        if (edge.from === 'review' && edge.to === 'evolver') {
+        // For project mode: handle specification to generator
+        if (edge.from === 'specification' && edge.to === 'generate') {
+            return `M ${from.x + fromRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
+        }
+
+        // For project mode: handle review to integrator
+        if (edge.from === 'review' && edge.to === 'integrator') {
+            return `M ${from.x + fromRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
+        }
+
+        // For project mode: handle integrator to decomposer
+        if (edge.from === 'integrator' && edge.to === 'decomposer') {
             return `M ${from.x + fromRadius/2} ${from.y - 35} L ${to.x - toRadius/2} ${to.y + 35}`;
+        }
+
+        // For project mode: handle integrator to evolver
+        if (edge.from === 'integrator' && edge.to === 'evolver') {
+            return `M ${from.x + fromRadius/2} ${from.y + 35} L ${to.x - toRadius/2} ${to.y - 35}`;
+        }
+
+        // For project mode: handle decomposer to end
+        if (edge.from === 'decomposer' && edge.to === 'end') {
+            return `M ${from.x + fromRadius/2} ${from.y + 35} L ${to.x - circleRadius} ${to.y - 50}`;
         }
 
         // For project mode: handle evolver to end
         if (edge.from === 'evolver' && edge.to === 'end') {
-            return `M ${from.x + fromRadius/2} ${from.y + 35} L ${to.x - circleRadius} ${to.y}`;
-        }
-
-        // For project mode: handle start to architect/decomposer
-        if (edge.from === 'start' && (edge.to === 'architect' || edge.to === 'decomposer')) {
-            return `M ${from.x + circleRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
+            return `M ${from.x + fromRadius/2} ${from.y - 35} L ${to.x - circleRadius} ${to.y + 50}`;
         }
 
         return `M ${from.x + fromRadius} ${from.y} L ${to.x - toRadius} ${to.y}`;
@@ -318,6 +336,14 @@ class PipelineGraph {
 
         if (edge.from === 'review' && edge.to === 'evolver') {
             return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 10 };
+        }
+
+        // New agents in project mode
+        if (edge.from === 'integrator' && (edge.to === 'decomposer' || edge.to === 'evolver')) {
+            return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+        }
+        if ((edge.from === 'decomposer' || edge.from === 'evolver') && edge.to === 'end') {
+            return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
         }
 
         return {
@@ -470,10 +496,12 @@ class PipelineGraph {
     getAgentIcon(agent) {
         const icons = {
             architect: 'A',
+            specification: 'S',
             decomposer: 'D',
             generator: 'G',
             validator: 'V',
             reviewer: 'R',
+            integrator: 'I',
             evolver: 'E'
         };
         return icons[agent] || '●';
@@ -538,11 +566,13 @@ class PipelineGraph {
         // Update status
         const statusMap = {
             'start': 'Starting...',
-            'architect': 'Designing architecture',
-            'decomposer': 'Breaking down tasks',
+            'architect': 'Planning architecture',
+            'specification': 'Creating specifications',
+            'decomposer': 'Analyzing code',
             'generate': 'Generating code',
             'validate': 'Validating code',
             'review': 'Reviewing quality',
+            'integrator': 'Testing integration',
             'evolver': 'Optimizing code',
             'end': 'Completed ✓',
             'fail': 'Failed ✗'

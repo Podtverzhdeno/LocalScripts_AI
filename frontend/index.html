@@ -100,17 +100,21 @@
                 </div>
                 <!-- Pipeline visualization - Project Mode -->
                 <div id="projectPipeline" class="hidden items-center gap-1.5 text-[10px] text-gray-500">
-                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">Architect</span>
+                    <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-medium">Architect</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium">Decomposer</span>
+                    <span class="px-2 py-0.5 rounded bg-pink-500/10 text-pink-400 font-medium">Specification</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">Generator</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-medium">Validator</span>
+                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">Validator</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-medium">Reviewer</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-medium">Evolver</span>
+                    <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-medium">Integrator</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium">Decomposer</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium">Evolver</span>
                 </div>
             </div>
         </div>
@@ -356,7 +360,7 @@
                     projectPipeline.classList.add('flex');
                 }
                 if (footerPipeline) {
-                    footerPipeline.textContent = 'Architect → Decomposer → Generator → Validator → Reviewer → Evolver';
+                    footerPipeline.textContent = 'Architect → Specification → Generator → Validator → Reviewer → Integrator → Decomposer → Evolver';
                 }
                 if (modeDescription) {
                     modeDescription.textContent = 'Multi-file project with architecture planning and optional evolution cycles for continuous improvement.';
