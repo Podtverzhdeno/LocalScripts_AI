@@ -6,7 +6,7 @@
 class PipelineGraph {
     constructor(containerId, mode = 'quick') {
         this.container = d3.select(`#${containerId}`);
-        this.width = 900;
+        this.width = 1000; // Increased from 900
         this.height = 500;
         this.currentNode = null;
         this.history = [];
@@ -149,10 +149,10 @@ class PipelineGraph {
         this.nodeGroup = this.svg.append('g').attr('class', 'nodes');
         this.drawNodes();
 
-        // Info panel (top right)
+        // Info panel (top left instead of top right)
         this.infoPanel = this.svg.append('g')
             .attr('class', 'info-panel')
-            .attr('transform', `translate(${this.width - 180}, 20)`);
+            .attr('transform', `translate(20, 20)`);
 
         this.infoPanel.append('rect')
             .attr('width', 160)
@@ -255,8 +255,8 @@ class PipelineGraph {
 
         if (!from || !to) return '';
 
-        // Card dimensions: width=120, height=70, so half-width=60, half-height=35
-        const cardHalfWidth = 60;
+        // Card dimensions: width=110, height=60, so half-width=55, half-height=30
+        const cardHalfWidth = 55;
         const circleRadius = 24;
 
         const fromRadius = (from.type === 'start' || from.type === 'end') ? circleRadius : cardHalfWidth;
@@ -271,7 +271,7 @@ class PipelineGraph {
 
         if (edge.from === 'validate' && edge.to === 'fail') {
             // Downward path
-            return `M ${from.x} ${from.y + 35} L ${to.x} ${to.y - circleRadius}`;
+            return `M ${from.x} ${from.y + 30} L ${to.x} ${to.y - circleRadius}`;
         }
 
         // For project mode: handle architect/decomposer to generator
@@ -281,12 +281,12 @@ class PipelineGraph {
 
         // For project mode: handle review to evolver
         if (edge.from === 'review' && edge.to === 'evolver') {
-            return `M ${from.x + fromRadius/2} ${from.y - 35} L ${to.x - toRadius/2} ${to.y + 35}`;
+            return `M ${from.x + fromRadius/2} ${from.y - 30} L ${to.x - toRadius/2} ${to.y + 30}`;
         }
 
         // For project mode: handle evolver to end
         if (edge.from === 'evolver' && edge.to === 'end') {
-            return `M ${from.x + fromRadius/2} ${from.y + 35} L ${to.x - circleRadius} ${to.y}`;
+            return `M ${from.x + fromRadius/2} ${from.y + 30} L ${to.x - circleRadius} ${to.y}`;
         }
 
         // For project mode: handle start to architect/decomposer
@@ -359,12 +359,12 @@ class PipelineGraph {
         nodeEnter.filter(d => d.type === 'agent')
             .append('rect')
             .attr('class', 'node-card')
-            .attr('x', -60)
-            .attr('y', -35)
-            .attr('width', 120)
-            .attr('height', 70)
-            .attr('rx', 12)
-            .attr('ry', 12)
+            .attr('x', -55)
+            .attr('y', -30)
+            .attr('width', 110)
+            .attr('height', 60)
+            .attr('rx', 10)
+            .attr('ry', 10)
             .attr('fill', d => `${d.color}15`)
             .attr('stroke', d => d.color)
             .attr('stroke-width', 2);
@@ -404,7 +404,7 @@ class PipelineGraph {
         nodeEnter.filter(d => d.type === 'agent')
             .append('g')
             .attr('class', 'exec-count')
-            .attr('transform', 'translate(50, -25)')
+            .attr('transform', 'translate(45, -20)')
             .style('opacity', 0)
             .call(g => {
                 g.append('circle')
@@ -426,8 +426,8 @@ class PipelineGraph {
         nodeEnter.append('circle')
             .attr('class', 'status-indicator')
             .attr('r', 0)
-            .attr('cx', -50)
-            .attr('cy', -25)
+            .attr('cx', -45)
+            .attr('cy', -20)
             .attr('fill', '#10b981')
             .style('opacity', 0);
     }
