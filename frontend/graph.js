@@ -16,11 +16,11 @@ class PipelineGraph {
         // Quick mode: Generator → Validator → Reviewer
         this.quickNodes = [
             { id: 'start', label: 'START', x: 80, y: 250, type: 'start' },
-            { id: 'generate', label: 'Generator', x: 280, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
-            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
-            { id: 'review', label: 'Reviewer', x: 680, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
-            { id: 'fail', label: 'FAIL', x: 480, y: 380, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 820, y: 250, type: 'end', color: '#10b981' }
+            { id: 'generate', label: 'Generator', x: 300, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
+            { id: 'validate', label: 'Validator', x: 500, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
+            { id: 'review', label: 'Reviewer', x: 700, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
+            { id: 'fail', label: 'FAIL', x: 500, y: 400, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 840, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.quickEdges = [
@@ -36,14 +36,14 @@ class PipelineGraph {
         // Project mode: Architect → Decomposer → Generator → Validator → Reviewer → Evolver
         this.projectNodes = [
             { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
-            { id: 'architect', label: 'Architect', x: 160, y: 180, type: 'agent', agent: 'architect', desc: 'Designs system architecture' },
-            { id: 'decomposer', label: 'Decomposer', x: 160, y: 320, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks' },
-            { id: 'generate', label: 'Generator', x: 320, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
-            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
-            { id: 'review', label: 'Reviewer', x: 640, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
-            { id: 'evolver', label: 'Evolver', x: 760, y: 180, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines' },
-            { id: 'fail', label: 'FAIL', x: 480, y: 400, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 840, y: 250, type: 'end', color: '#10b981' }
+            { id: 'architect', label: 'Architect', x: 180, y: 150, type: 'agent', agent: 'architect', desc: 'Designs system architecture' },
+            { id: 'decomposer', label: 'Decomposer', x: 180, y: 350, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks' },
+            { id: 'generate', label: 'Generator', x: 350, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
+            { id: 'validate', label: 'Validator', x: 520, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
+            { id: 'review', label: 'Reviewer', x: 690, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
+            { id: 'evolver', label: 'Evolver', x: 800, y: 150, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines' },
+            { id: 'fail', label: 'FAIL', x: 520, y: 420, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 860, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.projectEdges = [
@@ -226,11 +226,11 @@ class PipelineGraph {
             .attr('d', d => this.getEdgePath(d))
             .attr('fill', 'none')
             .attr('stroke', d => {
-                if (d.type === 'retry') return 'rgba(234, 179, 8, 0.15)';
-                if (d.type === 'fail') return 'rgba(239, 68, 68, 0.15)';
-                return 'rgba(255,255,255,0.1)';
+                if (d.type === 'retry') return 'rgba(234, 179, 8, 0.3)';
+                if (d.type === 'fail') return 'rgba(239, 68, 68, 0.3)';
+                return 'rgba(255,255,255,0.2)';
             })
-            .attr('stroke-width', 2)
+            .attr('stroke-width', 3)
             .attr('marker-end', 'url(#arrow)');
 
         // Edge labels
@@ -242,9 +242,9 @@ class PipelineGraph {
             .attr('x', d => this.getEdgeLabelPos(d).x)
             .attr('y', d => this.getEdgeLabelPos(d).y)
             .attr('text-anchor', 'middle')
-            .style('font-size', '10px')
-            .style('font-weight', '500')
-            .style('fill', '#6b7280')
+            .style('font-size', '11px')
+            .style('font-weight', '600')
+            .style('fill', '#9ca3af')
             .style('pointer-events', 'none')
             .text(d => d.label);
     }
@@ -255,41 +255,43 @@ class PipelineGraph {
 
         if (!from || !to) return '';
 
-        const nodeRadius = 40;
+        const nodeRadius = 45; // Updated to match new node size
+        const startRadius = (from.type === 'start' || from.type === 'end') ? 24 : nodeRadius;
+        const endRadius = (to.type === 'start' || to.type === 'end') ? 24 : nodeRadius;
 
         if (edge.curve) {
             // Curved path for feedback loops
             const midX = (from.x + to.x) / 2;
-            const midY = from.y + 120;
-            return `M ${from.x + nodeRadius} ${from.y} Q ${midX} ${midY} ${to.x - nodeRadius} ${to.y}`;
+            const midY = from.y + 130;
+            return `M ${from.x + startRadius} ${from.y} Q ${midX} ${midY} ${to.x - endRadius} ${to.y}`;
         }
 
         if (edge.from === 'validate' && edge.to === 'fail') {
             // Downward path
-            return `M ${from.x} ${from.y + nodeRadius} L ${to.x} ${to.y - 25}`;
+            return `M ${from.x} ${from.y + nodeRadius} L ${to.x} ${to.y - 24}`;
         }
 
         // For project mode: handle architect/decomposer to generator
         if ((edge.from === 'architect' || edge.from === 'decomposer') && edge.to === 'generate') {
-            return `M ${from.x + nodeRadius} ${from.y} L ${to.x - nodeRadius} ${to.y}`;
+            return `M ${from.x + startRadius} ${from.y} L ${to.x - endRadius} ${to.y}`;
         }
 
         // For project mode: handle review to evolver
         if (edge.from === 'review' && edge.to === 'evolver') {
-            return `M ${from.x + nodeRadius/2} ${from.y - nodeRadius/2} L ${to.x - nodeRadius/2} ${to.y + nodeRadius/2}`;
+            return `M ${from.x + startRadius/2} ${from.y - startRadius/2} L ${to.x - endRadius/2} ${to.y + endRadius/2}`;
         }
 
         // For project mode: handle evolver to end
         if (edge.from === 'evolver' && edge.to === 'end') {
-            return `M ${from.x + nodeRadius/2} ${from.y + nodeRadius/2} L ${to.x - 25} ${to.y}`;
+            return `M ${from.x + startRadius/2} ${from.y + startRadius/2} L ${to.x - 24} ${to.y}`;
         }
 
         // For project mode: handle start to architect/decomposer
         if (edge.from === 'start' && (edge.to === 'architect' || edge.to === 'decomposer')) {
-            return `M ${from.x + 25} ${from.y} L ${to.x - nodeRadius} ${to.y}`;
+            return `M ${from.x + 24} ${from.y} L ${to.x - endRadius} ${to.y}`;
         }
 
-        return `M ${from.x + nodeRadius} ${from.y} L ${to.x - nodeRadius} ${to.y}`;
+        return `M ${from.x + startRadius} ${from.y} L ${to.x - endRadius} ${to.y}`;
     }
 
     getEdgeLabelPos(edge) {
@@ -352,14 +354,14 @@ class PipelineGraph {
 
         // Node background (larger circle for hover effect)
         nodeEnter.append('circle')
-            .attr('r', d => d.type === 'start' || d.type === 'end' ? 25 : 40)
+            .attr('r', d => d.type === 'start' || d.type === 'end' ? 28 : 50)
             .attr('class', 'node-bg')
             .attr('fill', 'transparent')
             .attr('stroke', 'none');
 
         // Node circles
         nodeEnter.append('circle')
-            .attr('r', d => d.type === 'start' || d.type === 'end' ? 20 : 35)
+            .attr('r', d => d.type === 'start' || d.type === 'end' ? 24 : 45)
             .attr('class', 'node-circle')
             .attr('fill', d => this.getNodeColor(d))
             .attr('stroke', d => d.color || 'rgba(255,255,255,0.2)')
@@ -368,9 +370,9 @@ class PipelineGraph {
         // Node labels
         nodeEnter.append('text')
             .attr('text-anchor', 'middle')
-            .attr('dy', d => d.type === 'agent' ? -8 : 5)
-            .style('font-size', d => d.type === 'agent' ? '13px' : '11px')
-            .style('font-weight', '600')
+            .attr('dy', d => d.type === 'agent' ? -10 : 5)
+            .style('font-size', d => d.type === 'agent' ? '14px' : '12px')
+            .style('font-weight', '700')
             .style('fill', '#fff')
             .style('pointer-events', 'none')
             .text(d => d.label);
@@ -379,8 +381,10 @@ class PipelineGraph {
         nodeEnter.filter(d => d.type === 'agent')
             .append('text')
             .attr('text-anchor', 'middle')
-            .attr('dy', 18)
-            .style('font-size', '20px')
+            .attr('dy', 20)
+            .style('font-size', '28px')
+            .style('font-weight', '700')
+            .style('fill', 'rgba(16, 185, 129, 0.8)')
             .style('pointer-events', 'none')
             .text(d => this.getAgentIcon(d.agent));
 
@@ -388,18 +392,18 @@ class PipelineGraph {
         nodeEnter.filter(d => d.type === 'agent')
             .append('g')
             .attr('class', 'exec-count')
-            .attr('transform', 'translate(28, -28)')
+            .attr('transform', 'translate(35, -35)')
             .style('opacity', 0)
             .call(g => {
                 g.append('circle')
-                    .attr('r', 12)
+                    .attr('r', 14)
                     .attr('fill', '#10b981')
                     .attr('stroke', 'rgba(15, 23, 42, 0.9)')
                     .attr('stroke-width', 2);
                 g.append('text')
                     .attr('text-anchor', 'middle')
-                    .attr('dy', 4)
-                    .style('font-size', '10px')
+                    .attr('dy', 5)
+                    .style('font-size', '11px')
                     .style('font-weight', '700')
                     .style('fill', '#fff')
                     .style('pointer-events', 'none')
@@ -410,8 +414,8 @@ class PipelineGraph {
         nodeEnter.append('circle')
             .attr('class', 'status-indicator')
             .attr('r', 0)
-            .attr('cx', -28)
-            .attr('cy', -28)
+            .attr('cx', -35)
+            .attr('cy', -35)
             .attr('fill', '#10b981')
             .style('opacity', 0);
     }
@@ -428,12 +432,12 @@ class PipelineGraph {
 
     getAgentIcon(agent) {
         const icons = {
-            architect: '🏗',
-            decomposer: '🔨',
-            generator: '⚡',
-            validator: '✓',
-            reviewer: '👁',
-            evolver: '🔄'
+            architect: 'A',
+            decomposer: 'D',
+            generator: 'G',
+            validator: 'V',
+            reviewer: 'R',
+            evolver: 'E'
         };
         return icons[agent] || '●';
     }
@@ -543,16 +547,16 @@ class PipelineGraph {
                 .transition()
                 .duration(300)
                 .attr('r', d => {
-                    if (d.type === 'agent') return 38;
-                    if (d.type === 'end') return 23;
-                    return 22;
+                    if (d.type === 'agent') return 48;
+                    if (d.type === 'end') return 27;
+                    return 26;
                 })
                 .transition()
                 .duration(300)
                 .attr('r', d => {
-                    if (d.type === 'agent') return 35;
-                    if (d.type === 'end') return 20;
-                    return 20;
+                    if (d.type === 'agent') return 45;
+                    if (d.type === 'end') return 24;
+                    return 24;
                 });
 
             // Pulsing indicator
