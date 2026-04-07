@@ -16,10 +16,6 @@ from graph.nodes import make_nodes, _save_final
 def should_retry_or_fail(state: AgentState) -> str:
     """After validate: retry, go to review, or fail."""
     if state["iterations"] >= state["max_iterations"]:
-        # If we have valid code, go to review for final check
-        # Otherwise fail
-        if state.get("errors") is None:
-            return "review"
         return "fail"
     if state["status"] == "generating":
         return "generate"
@@ -31,9 +27,7 @@ def review_done_or_retry(state: AgentState) -> str:
     if state["status"] == "done":
         return END
     if state["iterations"] >= state["max_iterations"]:
-        # Max iterations reached but reviewer wants improvements
-        # Save as partial success instead of complete failure
-        return END
+        return "fail"
     return "generate"
 
 
