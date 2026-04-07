@@ -29,6 +29,7 @@ def make_nodes(
     llm_generator: BaseChatModel | None = None,
     llm_validator: BaseChatModel | None = None,
     llm_reviewer: BaseChatModel | None = None,
+    rag_system=None,
     node_callback=None,
     code_callback=None,
 ):
@@ -39,6 +40,7 @@ def make_nodes(
         - llm_generator: model for code generation (default: llm)
         - llm_validator: model for error explanation (default: llm)
         - llm_reviewer:  model for code review (default: llm)
+        - rag_system: RAG system for retrieval-augmented generation
 
     If a per-agent LLM is not provided, falls back to the shared `llm`.
     """
@@ -54,7 +56,7 @@ def make_nodes(
         """Generator node — writes or fixes Lua code."""
         if node_callback:
             node_callback("generate", state)
-        agent = GeneratorAgent(_gen_llm)
+        agent = GeneratorAgent(_gen_llm, rag_system=rag_system)
         code = agent.generate(
             task=state["task"],
             errors=state.get("errors"),

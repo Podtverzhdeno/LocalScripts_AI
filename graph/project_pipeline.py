@@ -66,8 +66,22 @@ def run_project_pipeline(
     print("  PHASE 2: Code Generation")
     print("="*60)
 
+    # Initialize RAG if enabled
+    rag_system = None
+    settings = load_settings()
+    rag_config = settings.get("rag", {})
+    if rag_config.get("enabled", False):
+        try:
+            from rag import create_rag_system, initialize_rag_with_examples
+            rag_system = create_rag_system(rag_config)
+            initialize_rag_with_examples(rag_system)
+            print(f"[RAG] Enabled with {rag_system.get_stats()['total_documents']} documents")
+        except Exception as e:
+            print(f"[RAG] Failed to initialize: {e}")
+            rag_system = None
+
     # Phase 2: Generate files in dependency order
-    generator = GeneratorAgent(get_llm("generator"))
+    generator = GeneratorAgent(get_llm("generator"), rag_system=rag_system)
     validator = ValidatorAgent(get_llm("validator"), _get_runner(project_path))
     reviewer = ReviewerAgent(get_llm("reviewer"))
 
@@ -83,56 +97,110 @@ def run_project_pipeline(
             print(f"  Warning: {file_name} not in plan, skipping")
             continue
 
-        # Generate file
+        # Build task description
         task = f"Create {file_name}: {file_info['purpose']}\n"
         if file_info['dependencies']:
             task += f"Dependencies: {', '.join(file_info['dependencies'])}\n"
 
-        # Simple generation loop (similar to quick mode)
-        code = generator.generate(task=task, errors=None, review=None)
+        # Retry loop with max_iterations
+        code = None
+        errors = None
+        review_feedback = None
 
-        # Validate
-        is_valid, error_explanation = validator.validate(
-            code=code, task=task, iteration=1
-        )
+        for iteration in range(1, max_iterations + 1):
+            try:
+                print(f"  Iteration {iteration}/{max_iterations}")
 
-        if not is_valid:
-            print(f"  [Validator] ERROR in {file_name}")
-            # TODO: Retry with error feedback
-            continue
+                # Generate code
+                code = generator.generate(task=task, errors=errors, review=review_feedback)
 
-        print(f"  [Validator] OK")
+                if not code or not code.strip():
+                    print(f"  [Generator] ERROR: Empty response from LLM")
+                    if iteration < max_iterations:
+                        errors = "Previous attempt returned empty code. Please generate valid Lua code."
+                        continue
+                    else:
+                        break
 
-        # Review
-        is_done, feedback = reviewer.review(
-            code=code,
-            task=task,
-            profile_metrics=validator._last_result.__dict__ if validator._last_result else None
-        )
+                print(f"  [Generator] Generated {len(code)} chars")
 
-        if is_done:
-            print(f"  [Reviewer] APPROVED")
+                # Validate
+                is_valid, error_explanation = validator.validate(
+                    code=code, task=task, iteration=iteration
+                )
+
+                if not is_valid:
+                    print(f"  [Validator] ERROR: {error_explanation[:100]}...")
+                    if iteration < max_iterations:
+                        errors = error_explanation
+                        continue
+                    else:
+                        print(f"  [Validator] Max iterations reached, saving anyway")
+                        break
+
+                print(f"  [Validator] OK")
+
+                # Review
+                is_done, feedback = reviewer.review(
+                    code=code,
+                    task=task,
+                    profile_metrics=validator._last_result.__dict__ if validator._last_result else None
+                )
+
+                if is_done:
+                    print(f"  [Reviewer] APPROVED")
+                    break
+                else:
+                    print(f"  [Reviewer] Feedback: {feedback[:80]}...")
+                    if iteration < max_iterations:
+                        review_feedback = feedback
+                        continue
+                    else:
+                        print(f"  [Reviewer] Max iterations reached, saving anyway")
+                        break
+
+            except Exception as e:
+                print(f"  [ERROR] Exception during generation: {e}")
+                if iteration < max_iterations:
+                    errors = f"Previous attempt failed with error: {str(e)}"
+                    continue
+                else:
+                    print(f"  [ERROR] Max iterations reached, skipping {file_name}")
+                    code = None
+                    break
+
+        # Save file if we got any code
+        if code and code.strip():
+            file_path = src_dir / file_name
+            file_path.write_text(code, encoding="utf-8")
+            generated_files.append(file_name)
+            print(f"  [SUCCESS] Saved {file_name}")
+
+            # Store metrics
+            if validator._last_result:
+                file_metrics[file_name] = {
+                    "time": validator._last_result.execution_time,
+                    "memory": validator._last_result.memory_used
+                }
         else:
-            print(f"  [Reviewer] Feedback: {feedback[:80]}...")
-
-        # Save file
-        file_path = src_dir / file_name
-        file_path.write_text(code, encoding="utf-8")
-        generated_files.append(file_name)
-
-        # Store metrics
-        if validator._last_result:
-            file_metrics[file_name] = {
-                "time": validator._last_result.execution_time,
-                "memory": validator._last_result.memory_used
-            }
+            print(f"  [FAILED] Could not generate {file_name}")
 
     print("\n" + "="*60)
     print("  PHASE 3: Project Analysis")
     print("="*60)
 
     # Phase 3: Decomposer analyzes the project
-    decomposer = DecomposerAgent(get_llm())
+    if not generated_files:
+        print("\n[WARNING] No files were generated successfully")
+        return {
+            "status": "failed",
+            "files": [],
+            "manifest": None,
+            "project_dir": str(project_path),
+            "error": "No files generated"
+        }
+
+    decomposer = DecomposerAgent(get_llm("decomposer"))
     manifest = decomposer.analyze(project_path, generated_files)
 
     # Save manifest
@@ -146,13 +214,13 @@ def run_project_pipeline(
     print(f"[Decomposer] Analyzed {manifest['total_files']} files")
     print(f"  Total lines: {manifest['total_lines']}")
 
-    # Phase 4: Evolution (if requested)
-    if evolutions > 0:
+    # Phase 4: Evolution (if requested and we have files)
+    if evolutions > 0 and generated_files:
         print("\n" + "="*60)
         print(f"  PHASE 4: Evolution ({evolutions} cycles)")
         print("="*60)
 
-        evolver = EvolverAgent(get_llm())
+        evolver = EvolverAgent(get_llm("evolver"))
         evolution_history = []
 
         for cycle in range(evolutions):

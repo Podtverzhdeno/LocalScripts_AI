@@ -31,6 +31,16 @@ pipeline:
 workspace:
   base_dir: workspace
 
+# RAG (Retrieval-Augmented Generation) configuration
+# Reduces hallucinations by retrieving relevant code examples
+rag:
+  enabled: true                          # Enable/disable RAG system
+  persist_directory: .veai/chroma        # Where to store vector DB
+  embedding_model: all-MiniLM-L6-v2      # Fast, lightweight embeddings (384 dim)
+  collection_name: lua_knowledge         # ChromaDB collection name
+  retrieval_k: 3                         # Number of examples to retrieve
+  max_context_length: 1500               # Max chars for RAG context
+
 # External MCP tools that agents can use during generation (optional).
 # Powered by langchain-mcp-adapters (official LangChain <-> MCP bridge).
 # Supports stdio and http transports. Uncomment and configure as needed.

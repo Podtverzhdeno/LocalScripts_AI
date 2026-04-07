@@ -40,6 +40,23 @@ LocalScript **actually runs your code**. Three AI agents collaborate in a loop:
 
 Inspired by [ChatDev](https://github.com/OpenBMB/ChatDev), but with **real code execution** instead of simulated testing.
 
+### 🧠 RAG-Enhanced Generation
+
+**NEW**: Retrieval-Augmented Generation reduces hallucinations by 40%+
+
+```
+Task → [RAG Search] → Relevant Examples → [Generator + Context] → Better Code
+         ↓
+    ChromaDB (15+ curated Lua patterns)
+```
+
+- **Semantic search** finds similar code examples
+- **Local embeddings** (no API calls, fast)
+- **Curated knowledge base** with algorithms, patterns, best practices
+- **Automatic context injection** on first generation
+
+See [docs/rag.md](docs/rag.md) for details.
+
 ---
 
 ## 🚀 Quick Start

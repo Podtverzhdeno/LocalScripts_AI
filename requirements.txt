@@ -10,3 +10,9 @@ uvicorn[standard]>=0.32.0
 websockets>=14.0
 mcp[cli]>=1.2.0
 langchain-mcp-adapters>=0.1.0
+
+# RAG dependencies
+chromadb>=0.4.22
+langchain-chroma>=0.1.0
+sentence-transformers>=2.3.0
+langchain-community>=0.3.0

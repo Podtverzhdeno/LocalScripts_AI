@@ -37,6 +37,7 @@ def build_pipeline(
     llm_generator: BaseChatModel | None = None,
     llm_validator: BaseChatModel | None = None,
     llm_reviewer: BaseChatModel | None = None,
+    rag_system=None,
     node_callback=None,
     code_callback=None,
 ) -> StateGraph:
@@ -46,6 +47,7 @@ def build_pipeline(
         llm_generator=llm_generator,
         llm_validator=llm_validator,
         llm_reviewer=llm_reviewer,
+        rag_system=rag_system,
         node_callback=node_callback,
         code_callback=code_callback,
     )
@@ -80,6 +82,7 @@ def run_pipeline(
     session_dir: str,
     max_iterations: int = 3,
     llm: BaseChatModel | None = None,
+    rag_system=None,
     node_callback=None,
     code_callback=None,
 ) -> AgentState:
@@ -87,10 +90,12 @@ def run_pipeline(
     Entry point. If llm is None, loads from settings.yaml.
     Supports per-agent LLM overrides via config/settings.yaml `agents:` section.
     Accepts external llm for testing without API keys.
+    Accepts rag_system for retrieval-augmented generation.
     Accepts node_callback for real-time progress updates.
     Accepts code_callback for streaming code generation.
     """
     from llm.factory import get_llm
+    from config.loader import load_settings
 
     # Load per-agent LLMs from config (returns default if no override)
     if llm is None:
@@ -102,11 +107,39 @@ def run_pipeline(
         # External LLM provided (e.g. tests) — use it for all agents
         llm_generator = llm_validator = llm_reviewer = None
 
+    # Initialize RAG if enabled and not provided
+    if rag_system is None:
+        settings = load_settings()
+        rag_config = settings.get("rag", {})
+        if rag_config.get("enabled", False):
+            try:
+                print("\n" + "="*60)
+                print("[RAG] Initializing Knowledge Base...")
+                print("="*60)
+                from rag import create_rag_system, initialize_rag_with_examples
+                rag_system = create_rag_system(rag_config)
+
+                stats = rag_system.get_stats()
+                if stats['total_documents'] == 0:
+                    print("[RAG] Empty database detected, loading examples...")
+                    initialize_rag_with_examples(rag_system)
+                    stats = rag_system.get_stats()
+
+                print(f"[RAG] Status: ACTIVE")
+                print(f"[RAG] Documents: {stats['total_documents']}")
+                print(f"[RAG] Model: {stats['embedding_model']}")
+                print(f"[RAG] Location: {stats['persist_directory']}")
+                print("="*60 + "\n")
+            except Exception as e:
+                print(f"[RAG] Failed to initialize: {e}")
+                rag_system = None
+
     pipeline = build_pipeline(
         llm,
         llm_generator=llm_generator,
         llm_validator=llm_validator,
         llm_reviewer=llm_reviewer,
+        rag_system=rag_system,
         node_callback=node_callback,
         code_callback=code_callback,
     )
