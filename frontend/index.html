@@ -90,13 +90,27 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <!-- Pipeline visualization -->
-                <div class="hidden sm:flex items-center gap-1.5 text-[10px] text-gray-500">
+                <!-- Pipeline visualization - Quick Mode -->
+                <div id="quickPipeline" class="hidden sm:flex items-center gap-1.5 text-[10px] text-gray-500">
                     <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">Generator</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-medium">Validator</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-medium">Reviewer</span>
+                </div>
+                <!-- Pipeline visualization - Project Mode -->
+                <div id="projectPipeline" class="hidden sm:hidden items-center gap-1.5 text-[10px] text-gray-500">
+                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">Architect</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium">Decomposer</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">Generator</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-medium">Validator</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-medium">Reviewer</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-medium">Evolver</span>
                 </div>
             </div>
         </div>
@@ -283,8 +297,8 @@
     <!-- ── Footer ── -->
     <footer class="border-t border-white/5 mt-20">
         <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-gray-600">
-            <span>LocalScript v0.1.0</span>
-            <span>Generator → Validator → Reviewer</span>
+            <span>LocalScript v0.1.0 • RAG-Enhanced Multi-Agent System</span>
+            <span id="footerPipeline">Generator → Validator → Reviewer</span>
         </div>
     </footer>
 
@@ -301,6 +315,9 @@
             const modeDescription = document.getElementById('modeDescription');
             const quickModeInfo = document.getElementById('quickModeInfo');
             const projectModeInfo = document.getElementById('projectModeInfo');
+            const quickPipeline = document.getElementById('quickPipeline');
+            const projectPipeline = document.getElementById('projectPipeline');
+            const footerPipeline = document.getElementById('footerPipeline');
 
             if (mode === 'quick') {
                 quickBtn.classList.add('mode-btn-active');
@@ -309,6 +326,17 @@
                 projectInput.classList.add('hidden');
                 if (quickModeInfo) quickModeInfo.classList.remove('hidden');
                 if (projectModeInfo) projectModeInfo.classList.add('hidden');
+                if (quickPipeline) {
+                    quickPipeline.classList.remove('hidden');
+                    quickPipeline.classList.add('flex');
+                }
+                if (projectPipeline) {
+                    projectPipeline.classList.add('hidden');
+                    projectPipeline.classList.remove('flex');
+                }
+                if (footerPipeline) {
+                    footerPipeline.textContent = 'Generator → Validator → Reviewer';
+                }
                 if (modeDescription) {
                     modeDescription.textContent = 'Fast single-file generation — describe a task and get working Lua code in seconds.';
                 }
@@ -319,6 +347,17 @@
                 quickInput.classList.add('hidden');
                 if (quickModeInfo) quickModeInfo.classList.add('hidden');
                 if (projectModeInfo) projectModeInfo.classList.remove('hidden');
+                if (quickPipeline) {
+                    quickPipeline.classList.add('hidden');
+                    quickPipeline.classList.remove('flex');
+                }
+                if (projectPipeline) {
+                    projectPipeline.classList.remove('hidden');
+                    projectPipeline.classList.add('flex');
+                }
+                if (footerPipeline) {
+                    footerPipeline.textContent = 'Architect → Decomposer → Generator → Validator → Reviewer → Evolver';
+                }
                 if (modeDescription) {
                     modeDescription.textContent = 'Multi-file project with architecture planning and optional evolution cycles for continuous improvement.';
                 }
