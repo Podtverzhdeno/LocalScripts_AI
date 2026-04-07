@@ -16,11 +16,11 @@ class PipelineGraph {
         // Quick mode: Generator → Validator → Reviewer
         this.quickNodes = [
             { id: 'start', label: 'START', x: 80, y: 250, type: 'start' },
-            { id: 'generate', label: 'Generator', x: 280, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
-            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'review', label: 'Reviewer', x: 680, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'fail', label: 'FAIL', x: 480, y: 400, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 820, y: 250, type: 'end', color: '#10b981' }
+            { id: 'generate', label: 'Generator', x: 280, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#00ff00' },
+            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#ffff00' },
+            { id: 'review', label: 'Reviewer', x: 680, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#ff00ff' },
+            { id: 'fail', label: 'FAIL', x: 480, y: 400, type: 'end', color: '#ff0000' },
+            { id: 'end', label: 'SUCCESS', x: 820, y: 250, type: 'end', color: '#00ff00' }
         ];
 
         this.quickEdges = [
@@ -36,14 +36,14 @@ class PipelineGraph {
         // Project mode: Architect → Decomposer → Generator → Validator → Reviewer → Evolver
         this.projectNodes = [
             { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
-            { id: 'architect', label: 'Architect', x: 180, y: 150, type: 'agent', agent: 'architect', desc: 'Designs system architecture', color: '#06b6d4' },
-            { id: 'decomposer', label: 'Decomposer', x: 180, y: 350, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks', color: '#a855f7' },
-            { id: 'generate', label: 'Generator', x: 350, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
-            { id: 'validate', label: 'Validator', x: 520, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'review', label: 'Reviewer', x: 690, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'evolver', label: 'Evolver', x: 800, y: 150, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
-            { id: 'fail', label: 'FAIL', x: 520, y: 420, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 860, y: 250, type: 'end', color: '#10b981' }
+            { id: 'architect', label: 'Architect', x: 200, y: 150, type: 'agent', agent: 'architect', desc: 'Designs system architecture', color: '#00ffff' },
+            { id: 'decomposer', label: 'Decomposer', x: 200, y: 350, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks', color: '#ff00ff' },
+            { id: 'generate', label: 'Generator', x: 380, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#00ff00' },
+            { id: 'validate', label: 'Validator', x: 560, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#ffff00' },
+            { id: 'review', label: 'Reviewer', x: 740, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#ff0080' },
+            { id: 'evolver', label: 'Evolver', x: 850, y: 150, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#ff6600' },
+            { id: 'fail', label: 'FAIL', x: 560, y: 420, type: 'end', color: '#ff0000' },
+            { id: 'end', label: 'SUCCESS', x: 920, y: 250, type: 'end', color: '#00ff00' }
         ];
 
         this.projectEdges = [
@@ -226,11 +226,15 @@ class PipelineGraph {
             .attr('d', d => this.getEdgePath(d))
             .attr('fill', 'none')
             .attr('stroke', d => {
-                if (d.type === 'retry') return 'rgba(234, 179, 8, 0.3)';
-                if (d.type === 'fail') return 'rgba(239, 68, 68, 0.3)';
-                return 'rgba(255,255,255,0.2)';
+                if (d.type === 'retry') return '#ffff00';
+                if (d.type === 'fail') return '#ff0000';
+                return '#00ffff';
             })
-            .attr('stroke-width', 3)
+            .attr('stroke-width', 2)
+            .style('filter', d => {
+                const color = d.type === 'retry' ? '#ffff00' : d.type === 'fail' ? '#ff0000' : '#00ffff';
+                return `drop-shadow(0 0 4px ${color})`;
+            })
             .attr('marker-end', 'url(#arrow)');
 
         // Edge labels
@@ -355,7 +359,7 @@ class PipelineGraph {
                 self.hideTooltip();
             });
 
-        // Draw agent nodes as rounded rectangles (cards) - larger, more prominent
+        // Draw agent nodes as rounded rectangles (cards) - cyberpunk style
         nodeEnter.filter(d => d.type === 'agent')
             .append('rect')
             .attr('class', 'node-card')
@@ -363,21 +367,42 @@ class PipelineGraph {
             .attr('y', -35)
             .attr('width', 140)
             .attr('height', 70)
-            .attr('rx', 8)
-            .attr('ry', 8)
-            .attr('fill', 'rgba(15, 23, 42, 0.95)')
+            .attr('rx', 4)
+            .attr('ry', 4)
+            .attr('fill', 'rgba(0, 0, 0, 0.9)')
             .attr('stroke', d => d.color)
             .attr('stroke-width', 2)
-            .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))');
+            .style('filter', d => `drop-shadow(0 0 10px ${d.color})`);
 
-        // Agent icon circle background
+        // Cyberpunk corner accents
+        nodeEnter.filter(d => d.type === 'agent')
+            .append('line')
+            .attr('x1', -70)
+            .attr('y1', -35)
+            .attr('x2', -55)
+            .attr('y2', -35)
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 3);
+
+        nodeEnter.filter(d => d.type === 'agent')
+            .append('line')
+            .attr('x1', -70)
+            .attr('y1', -35)
+            .attr('x2', -70)
+            .attr('y2', -20)
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 3);
+
+        // Agent icon circle background - neon glow
         nodeEnter.filter(d => d.type === 'agent')
             .append('circle')
             .attr('cx', -45)
             .attr('cy', 0)
             .attr('r', 18)
-            .attr('fill', d => d.color)
-            .attr('opacity', 0.2);
+            .attr('fill', 'rgba(0, 0, 0, 0.8)')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 2)
+            .style('filter', d => `drop-shadow(0 0 8px ${d.color})`);
 
         // Agent icon text
         nodeEnter.filter(d => d.type === 'agent')
@@ -390,9 +415,10 @@ class PipelineGraph {
             .style('font-weight', '700')
             .style('fill', d => d.color)
             .style('pointer-events', 'none')
+            .style('text-shadow', d => `0 0 10px ${d.color}`)
             .text(d => this.getAgentIcon(d.agent));
 
-        // Agent labels
+        // Agent labels - neon text
         nodeEnter.filter(d => d.type === 'agent')
             .append('text')
             .attr('x', -15)
@@ -401,8 +427,9 @@ class PipelineGraph {
             .attr('dy', 5)
             .style('font-size', '14px')
             .style('font-weight', '600')
-            .style('fill', '#fff')
+            .style('fill', d => d.color)
             .style('pointer-events', 'none')
+            .style('text-shadow', d => `0 0 8px ${d.color}`)
             .text(d => d.label);
 
         // Start/End nodes as circles
@@ -583,11 +610,11 @@ class PipelineGraph {
             const glowFilter = nodeId === 'fail' ? 'url(#glow-red)' : 'url(#glow-green)';
 
             if (nodeData && nodeData.type === 'agent') {
-                // Highlight card with glow
+                // Highlight card with intense neon glow
                 this.nodeGroup.select(`.node-${nodeId} .node-card`)
                     .attr('stroke', nodeData.color)
                     .attr('stroke-width', 3)
-                    .style('filter', 'drop-shadow(0 0 20px ' + nodeData.color + ')')
+                    .style('filter', d => `drop-shadow(0 0 20px ${nodeData.color}) drop-shadow(0 0 40px ${nodeData.color})`)
                     .transition()
                     .duration(200)
                     .attr('stroke-width', 4)
@@ -682,7 +709,7 @@ class PipelineGraph {
         this.nodeGroup.selectAll('.node-card')
             .attr('stroke', d => d.color)
             .attr('stroke-width', 2)
-            .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))');
+            .style('filter', d => `drop-shadow(0 0 10px ${d.color})`);
 
         this.nodeGroup.selectAll('.node-circle')
             .attr('stroke', d => d.color || 'rgba(255,255,255,0.3)')
@@ -700,11 +727,15 @@ class PipelineGraph {
 
         this.edgeGroup.selectAll('path')
             .attr('stroke', d => {
-                if (d.type === 'retry') return 'rgba(234, 179, 8, 0.3)';
-                if (d.type === 'fail') return 'rgba(239, 68, 68, 0.3)';
-                return 'rgba(255,255,255,0.2)';
+                if (d.type === 'retry') return '#ffff00';
+                if (d.type === 'fail') return '#ff0000';
+                return '#00ffff';
             })
-            .attr('stroke-width', 3)
+            .attr('stroke-width', 2)
+            .style('filter', d => {
+                const color = d.type === 'retry' ? '#ffff00' : d.type === 'fail' ? '#ff0000' : '#00ffff';
+                return `drop-shadow(0 0 4px ${color})`;
+            })
             .attr('marker-end', 'url(#arrow)');
     }
 
