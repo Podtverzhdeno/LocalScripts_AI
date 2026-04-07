@@ -1,0 +1,31 @@
+Transform JSON data from API A format to API B format.
+
+Requirements:
+- Input format (API A):
+  {
+    "user": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+7 999 123 45 67"
+    }
+  }
+
+- Output format (API B):
+  {
+    "fullName": "John Doe",
+    "contact": {
+      "email": "john@example.com",
+      "phone": "+7 999 123 45 67"
+    }
+  }
+
+- Implement generic field mapping function
+- Support nested object transformation
+- Handle missing fields gracefully
+- Support both flattening and nesting operations
+- Provide function to serialize result to JSON string
+
+Additional transformations to support:
+- Flatten nested structures: {"user": {"name": "John"}} → {"user_name": "John"}
+- Nest flat structures: {"name": "John", "email": "..."} → {"user": {"name": "John", "email": "..."}}
+- Map field names: {"firstName": "John"} → {"name": "John"}

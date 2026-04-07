@@ -1,0 +1,28 @@
+Create a Lua function to format phone numbers for sending to Kafka message queue.
+
+Requirements:
+- Accept phone number in any format (with spaces, dashes, parentheses)
+- Normalize to digits only
+- Add country code if missing (assume Russia +7 for 10-digit numbers)
+- Return Kafka message structure with:
+  - topic: "phone_numbers"
+  - key: normalized phone number
+  - value: object with normalized phone, original format, timestamp
+- Include function to serialize message to JSON format
+
+Example inputs:
+- "+7 (999) 123-45-67" → "79991234567"
+- "8 999 123 45 67" → "79991234567"
+- "9991234567" → "79991234567"
+
+Output format:
+{
+  "topic": "phone_numbers",
+  "key": "79991234567",
+  "timestamp": 1234567890,
+  "value": {
+    "phone": "79991234567",
+    "original": "+7 (999) 123-45-67",
+    "source": "lua_integration"
+  }
+}

@@ -1,0 +1,25 @@
+Create a REST API client for a user management service.
+
+Requirements:
+- Base URL: configurable
+- Implement CRUD operations:
+  - GET /users/:id - get user by ID
+  - POST /users - create new user
+  - PUT /users/:id - update user
+  - DELETE /users/:id - delete user
+  - GET /users?page=1&limit=10 - list users with pagination
+- Build proper HTTP request structures with:
+  - Method (GET, POST, PUT, DELETE)
+  - URL with path parameters
+  - Headers (Content-Type, User-Agent)
+  - Body for POST/PUT requests
+- Support query string parameters
+- Return request object ready for execution
+
+Example usage:
+local client = create_user_api_client("https://api.example.com")
+local request = client:get_user(123)
+-- request = {method: "GET", url: "https://api.example.com/users/123", headers: {...}}
+
+local create_request = client:create_user({name: "John", email: "john@example.com", role: "admin"})
+-- request = {method: "POST", url: "https://api.example.com/users", body: '{"name":"John",...}', headers: {...}}

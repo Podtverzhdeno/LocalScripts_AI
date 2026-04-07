@@ -1,0 +1,34 @@
+Process events from a message queue and store results in a database.
+
+Requirements:
+- Parse incoming Kafka messages from JSON format
+- Extract event data (type, payload, timestamp)
+- Process different event types:
+  - "user.created" - insert new user into database
+  - "user.updated" - update existing user
+  - "user.deleted" - delete user from database
+- Build appropriate SQL queries for PostgreSQL
+- Handle errors gracefully with try-catch pattern
+- Support batch processing of multiple events
+- Return processing results with success/failure counts
+
+Event message format:
+{
+  "topic": "user_events",
+  "key": "user_123",
+  "timestamp": 1234567890,
+  "value": {
+    "event_type": "user.created",
+    "user_id": 123,
+    "data": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user"
+    }
+  }
+}
+
+Expected output:
+- SQL INSERT/UPDATE/DELETE queries
+- Processing statistics: {processed: 10, failed: 2, errors: [...]}
+- Error details for failed events

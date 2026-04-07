@@ -960,6 +960,720 @@ end)""",
 
 
 # ============================================================
+# Low-Code Patterns (MTS Hackathon 2026)
+# ============================================================
+
+LOWCODE_PATTERN_EXAMPLES = [
+    {
+        "description": "Event-driven architecture with event emitter",
+        "code": """local EventEmitter = {}
+EventEmitter.__index = EventEmitter
+
+function EventEmitter.new()
+    local self = setmetatable({}, EventEmitter)
+    self.listeners = {}
+    return self
+end
+
+function EventEmitter:on(event, callback)
+    if not self.listeners[event] then
+        self.listeners[event] = {}
+    end
+    table.insert(self.listeners[event], callback)
+end
+
+function EventEmitter:emit(event, ...)
+    if not self.listeners[event] then return end
+    for _, callback in ipairs(self.listeners[event]) do
+        pcall(callback, ...)
+    end
+end
+
+function EventEmitter:once(event, callback)
+    local wrapper
+    wrapper = function(...)
+        callback(...)
+        self:off(event, wrapper)
+    end
+    self:on(event, wrapper)
+end""",
+        "category": "pattern",
+        "tags": ["event-driven", "observer", "pub-sub", "decoupling"]
+    },
+    {
+        "description": "Data pipeline with composable transformations",
+        "code": """local Pipeline = {}
+Pipeline.__index = Pipeline
+
+function Pipeline.new()
+    local self = setmetatable({}, Pipeline)
+    self.stages = {}
+    return self
+end
+
+function Pipeline:pipe(transform)
+    table.insert(self.stages, transform)
+    return self
+end
+
+function Pipeline:execute(data)
+    local result = data
+    for i, stage in ipairs(self.stages) do
+        local success, output = pcall(stage, result)
+        if not success then
+            return nil, string.format("Stage %d failed: %s", i, output)
+        end
+        result = output
+    end
+    return result
+end
+
+-- Common transformations
+local Transforms = {}
+
+function Transforms.filter(predicate)
+    return function(items)
+        local filtered = {}
+        for _, item in ipairs(items) do
+            if predicate(item) then
+                table.insert(filtered, item)
+            end
+        end
+        return filtered
+    end
+end
+
+function Transforms.map(mapper)
+    return function(items)
+        local mapped = {}
+        for i, item in ipairs(items) do
+            mapped[i] = mapper(item)
+        end
+        return mapped
+    end
+end""",
+        "category": "pattern",
+        "tags": ["pipeline", "etl", "data-processing", "functional"]
+    },
+    {
+        "description": "Retry logic with exponential backoff",
+        "code": """function retry_with_backoff(func, config)
+    config = config or {
+        max_attempts = 3,
+        initial_delay = 1,
+        max_delay = 60,
+        backoff_factor = 2,
+        jitter = true
+    }
+
+    local attempts = 0
+    local delay = config.initial_delay
+
+    while attempts < config.max_attempts do
+        attempts = attempts + 1
+        local success, result = pcall(func)
+
+        if success then
+            return result, nil
+        end
+
+        if attempts >= config.max_attempts then
+            return nil, string.format("Failed after %d attempts: %s", attempts, result)
+        end
+
+        local wait_time = math.min(delay, config.max_delay)
+        if config.jitter then
+            wait_time = wait_time * (0.5 + math.random() * 0.5)
+        end
+
+        -- Wait before retry
+        local start = os.time()
+        while os.time() - start < wait_time do end
+
+        delay = delay * config.backoff_factor
+    end
+end""",
+        "category": "pattern",
+        "tags": ["retry", "resilience", "backoff", "fault-tolerance"]
+    },
+    {
+        "description": "Circuit breaker for fault tolerance",
+        "code": """local CircuitBreaker = {}
+CircuitBreaker.__index = CircuitBreaker
+
+function CircuitBreaker.new(config)
+    local self = setmetatable({}, CircuitBreaker)
+    self.failure_threshold = config.failure_threshold or 5
+    self.success_threshold = config.success_threshold or 2
+    self.timeout = config.timeout or 60
+    self.state = "CLOSED"
+    self.failure_count = 0
+    self.success_count = 0
+    self.last_failure_time = 0
+    return self
+end
+
+function CircuitBreaker:call(func)
+    if self.state == "OPEN" then
+        if os.time() - self.last_failure_time >= self.timeout then
+            self.state = "HALF_OPEN"
+        else
+            return nil, "Circuit breaker is OPEN"
+        end
+    end
+
+    local success, result = pcall(func)
+
+    if success then
+        self:on_success()
+        return result, nil
+    else
+        self:on_failure()
+        return nil, result
+    end
+end
+
+function CircuitBreaker:on_success()
+    self.failure_count = 0
+    if self.state == "HALF_OPEN" then
+        self.success_count = self.success_count + 1
+        if self.success_count >= self.success_threshold then
+            self.state = "CLOSED"
+        end
+    end
+end
+
+function CircuitBreaker:on_failure()
+    self.failure_count = self.failure_count + 1
+    self.last_failure_time = os.time()
+    if self.failure_count >= self.failure_threshold then
+        self.state = "OPEN"
+    end
+end""",
+        "category": "pattern",
+        "tags": ["circuit-breaker", "resilience", "fault-tolerance", "microservices"]
+    },
+    {
+        "description": "Rate limiter with token bucket algorithm",
+        "code": """local TokenBucket = {}
+TokenBucket.__index = TokenBucket
+
+function TokenBucket.new(capacity, refill_rate)
+    local self = setmetatable({}, TokenBucket)
+    self.capacity = capacity
+    self.tokens = capacity
+    self.refill_rate = refill_rate
+    self.last_refill = os.time()
+    return self
+end
+
+function TokenBucket:consume(tokens)
+    tokens = tokens or 1
+    self:refill()
+
+    if self.tokens >= tokens then
+        self.tokens = self.tokens - tokens
+        return true
+    end
+    return false
+end
+
+function TokenBucket:refill()
+    local now = os.time()
+    local elapsed = now - self.last_refill
+
+    if elapsed > 0 then
+        local new_tokens = elapsed * self.refill_rate
+        self.tokens = math.min(self.capacity, self.tokens + new_tokens)
+        self.last_refill = now
+    end
+end
+
+function TokenBucket:available()
+    self:refill()
+    return self.tokens
+end""",
+        "category": "pattern",
+        "tags": ["rate-limiting", "throttling", "token-bucket", "api-protection"]
+    },
+    {
+        "description": "Error handling with Result type and validation",
+        "code": """local Result = {}
+Result.__index = Result
+
+function Result.ok(value)
+    return setmetatable({success = true, value = value}, Result)
+end
+
+function Result.err(error)
+    return setmetatable({success = false, error = error}, Result)
+end
+
+function Result:is_ok()
+    return self.success
+end
+
+function Result:unwrap()
+    if self.success then
+        return self.value
+    else
+        error("Called unwrap on error: " .. tostring(self.error))
+    end
+end
+
+function Result:unwrap_or(default)
+    return self.success and self.value or default
+end
+
+function Result:map(func)
+    if self.success then
+        return Result.ok(func(self.value))
+    else
+        return self
+    end
+end
+
+-- Validator for multiple errors
+local Validator = {}
+Validator.__index = Validator
+
+function Validator.new()
+    local self = setmetatable({}, Validator)
+    self.errors = {}
+    return self
+end
+
+function Validator:add_error(field, message)
+    if not self.errors[field] then
+        self.errors[field] = {}
+    end
+    table.insert(self.errors[field], message)
+end
+
+function Validator:is_valid()
+    return next(self.errors) == nil
+end""",
+        "category": "pattern",
+        "tags": ["error-handling", "validation", "result-type", "robustness"]
+    }
+]
+
+
+# ============================================================
+# Integration Patterns (MTS Hackathon 2026)
+# ============================================================
+
+INTEGRATION_EXAMPLES = [
+    {
+        "description": "Email validation with RFC 5322 rules",
+        "code": """function validate_email(email)
+    if type(email) ~= "string" then
+        return false
+    end
+
+    -- Check basic structure: local@domain
+    local pattern = "^[%w%._%+%-]+@[%w%.%-]+%.%w+$"
+    if not string.match(email, pattern) then
+        return false
+    end
+
+    -- Additional checks
+    local local_part, domain = email:match("^(.+)@(.+)$")
+
+    -- Local part should not start or end with dot
+    if local_part:match("^%.") or local_part:match("%.$") then
+        return false
+    end
+
+    -- No consecutive dots
+    if local_part:match("%.%.") then
+        return false
+    end
+
+    -- Domain should have at least one dot
+    if not domain:match("%.") then
+        return false
+    end
+
+    return true
+end
+
+-- Batch validation
+function validate_emails(email_list)
+    local results = {}
+    for i, email in ipairs(email_list) do
+        results[i] = {
+            email = email,
+            valid = validate_email(email)
+        }
+    end
+    return results
+end""",
+        "category": "integration",
+        "tags": ["email", "validation", "rfc5322", "form", "input"]
+    },
+    {
+        "description": "Kafka message producer - format data for message queue",
+        "code": """-- Format phone number for Kafka message
+function format_phone_for_kafka(phone)
+    -- Remove all non-digit characters
+    local normalized = phone:gsub("[^%d]", "")
+
+    -- Ensure it starts with country code
+    if #normalized == 10 then
+        normalized = "7" .. normalized  -- Add Russia country code
+    end
+
+    return {
+        topic = "phone_numbers",
+        key = normalized,
+        value = {
+            phone = normalized,
+            original = phone,
+            timestamp = os.time(),
+            source = "lua_integration"
+        }
+    }
+end
+
+-- Generic Kafka message formatter
+function create_kafka_message(topic, key, data)
+    return {
+        topic = topic,
+        key = key or "",
+        value = data,
+        timestamp = os.time(),
+        headers = {
+            ["content-type"] = "application/json",
+            ["producer"] = "localscript"
+        }
+    }
+end
+
+-- Serialize message to JSON-like string
+function serialize_kafka_message(message)
+    local parts = {}
+    table.insert(parts, string.format('"topic":"%s"', message.topic))
+    table.insert(parts, string.format('"key":"%s"', message.key))
+    table.insert(parts, string.format('"timestamp":%d', message.timestamp))
+    return "{" .. table.concat(parts, ",") .. "}"
+end""",
+        "category": "integration",
+        "tags": ["kafka", "message-queue", "producer", "event-streaming"]
+    },
+    {
+        "description": "REST API client for user service",
+        "code": """-- Create HTTP request structure
+function create_http_request(method, url, body, headers)
+    local request = {
+        method = method or "GET",
+        url = url,
+        headers = headers or {},
+        body = body
+    }
+
+    -- Add default headers
+    if not request.headers["Content-Type"] and body then
+        request.headers["Content-Type"] = "application/json"
+    end
+    if not request.headers["User-Agent"] then
+        request.headers["User-Agent"] = "LocalScript/1.0"
+    end
+
+    return request
+end
+
+-- User service API client
+function create_user_api_client(base_url)
+    local client = {
+        base_url = base_url
+    }
+
+    -- Get user by ID
+    function client:get_user(user_id)
+        local url = self.base_url .. "/users/" .. tostring(user_id)
+        return create_http_request("GET", url)
+    end
+
+    -- Create new user
+    function client:create_user(user_data)
+        local url = self.base_url .. "/users"
+        local body = string.format(
+            '{"name":"%s","email":"%s","role":"%s"}',
+            user_data.name,
+            user_data.email,
+            user_data.role or "user"
+        )
+        return create_http_request("POST", url, body)
+    end
+
+    -- Update user
+    function client:update_user(user_id, user_data)
+        local url = self.base_url .. "/users/" .. tostring(user_id)
+        local body = string.format('{"name":"%s","email":"%s"}', user_data.name, user_data.email)
+        return create_http_request("PUT", url, body)
+    end
+
+    return client
+end""",
+        "category": "integration",
+        "tags": ["http", "rest-api", "client", "crud", "microservices"]
+    },
+    {
+        "description": "JSON data transformer between API formats",
+        "code": """-- Transform user object from API A to API B format
+function transform_user_format(source_json)
+    -- Parse source format: {user: {name, email, phone}}
+    local name = source_json:match('"name":"([^"]+)"')
+    local email = source_json:match('"email":"([^"]+)"')
+    local phone = source_json:match('"phone":"([^"]+)"')
+
+    -- Build target format: {fullName, contact: {email, phone}}
+    local target = string.format(
+        '{"fullName":"%s","contact":{"email":"%s","phone":"%s"}}',
+        name or "",
+        email or "",
+        phone or ""
+    )
+
+    return target
+end
+
+-- Generic field mapper
+function map_fields(source_json, field_mapping)
+    local result = {}
+
+    for source_field, target_field in pairs(field_mapping) do
+        local pattern = string.format('"%s":"([^"]+)"', source_field)
+        local value = source_json:match(pattern)
+        if value then
+            result[target_field] = value
+        end
+    end
+
+    return result
+end
+
+-- Flatten nested structure
+function flatten_json(nested_json, prefix)
+    prefix = prefix or ""
+    local flat = {}
+
+    -- Extract nested user object
+    local user_block = nested_json:match('"user":%{(.-)%}')
+    if user_block then
+        for key, value in user_block:gmatch('"([^"]+)":"([^"]+)"') do
+            flat[prefix .. key] = value
+        end
+    end
+
+    return flat
+end""",
+        "category": "integration",
+        "tags": ["json", "transform", "api", "data-mapping", "etl"]
+    },
+    {
+        "description": "Redis cache operations",
+        "code": """-- Create Redis command structure
+function redis_command(cmd, ...)
+    local args = {...}
+    return {
+        command = cmd,
+        args = args,
+        timestamp = os.time()
+    }
+end
+
+-- SET operation with expiration
+function redis_set(key, value, ttl)
+    local cmd = {
+        command = "SET",
+        args = {key, value}
+    }
+
+    if ttl then
+        table.insert(cmd.args, "EX")
+        table.insert(cmd.args, tostring(ttl))
+    end
+
+    return cmd
+end
+
+-- Cache manager with TTL
+function create_cache_manager(default_ttl)
+    local manager = {
+        default_ttl = default_ttl or 3600  -- 1 hour default
+    }
+
+    function manager:set(key, value, ttl)
+        ttl = ttl or self.default_ttl
+        return redis_set(key, value, ttl)
+    end
+
+    function manager:get(key)
+        return redis_command("GET", key)
+    end
+
+    function manager:cache_key(prefix, id)
+        return string.format("%s:%s", prefix, tostring(id))
+    end
+
+    return manager
+end
+
+-- Session storage
+function create_session_store()
+    local store = {}
+
+    function store:save_session(session_id, user_data, ttl)
+        local key = "session:" .. session_id
+        local value = string.format(
+            '{"user_id":%d,"username":"%s","created_at":%d}',
+            user_data.user_id,
+            user_data.username,
+            os.time()
+        )
+        return redis_set(key, value, ttl or 1800)
+    end
+
+    return store
+end""",
+        "category": "integration",
+        "tags": ["redis", "cache", "session", "key-value", "storage"]
+    },
+    {
+        "description": "PostgreSQL query builder",
+        "code": """-- Build SELECT query
+function build_select(table_name, columns, where_clause, limit)
+    local cols = columns and table.concat(columns, ", ") or "*"
+    local query = string.format("SELECT %s FROM %s", cols, table_name)
+
+    if where_clause then
+        query = query .. " WHERE " .. where_clause
+    end
+
+    if limit then
+        query = query .. " LIMIT " .. tostring(limit)
+    end
+
+    return query .. ";"
+end
+
+-- Build INSERT query
+function build_insert(table_name, data)
+    local columns = {}
+    local values = {}
+
+    for key, value in pairs(data) do
+        table.insert(columns, key)
+        if type(value) == "string" then
+            table.insert(values, string.format("'%s'", value))
+        elseif type(value) == "number" then
+            table.insert(values, tostring(value))
+        else
+            table.insert(values, "NULL")
+        end
+    end
+
+    return string.format(
+        "INSERT INTO %s (%s) VALUES (%s);",
+        table_name,
+        table.concat(columns, ", "),
+        table.concat(values, ", ")
+    )
+end
+
+-- User repository pattern
+function create_user_repository()
+    local repo = {
+        table_name = "users"
+    }
+
+    function repo:find_by_id(user_id)
+        return build_select(self.table_name, nil, "id = " .. tostring(user_id), 1)
+    end
+
+    function repo:create(user_data)
+        return build_insert(self.table_name, user_data)
+    end
+
+    return repo
+end""",
+        "category": "integration",
+        "tags": ["postgresql", "sql", "database", "query-builder", "orm"]
+    },
+    {
+        "description": "Event processor - Kafka to Database",
+        "code": """-- Parse Kafka message from JSON
+function parse_kafka_message(json_string)
+    local message = {}
+    message.topic = json_string:match('"topic":"([^"]+)"')
+    message.key = json_string:match('"key":"([^"]+)"')
+    local ts = json_string:match('"timestamp":(%d+)')
+    message.timestamp = tonumber(ts)
+
+    -- Extract value object
+    local value_str = json_string:match('"value":%{(.-)%}')
+    if value_str then
+        message.value = {}
+        for k, v in value_str:gmatch('"([^"]+)":"([^"]+)"') do
+            message.value[k] = v
+        end
+    end
+
+    return message
+end
+
+-- Process event and generate SQL
+function process_user_event(event)
+    local event_type = event.value.event_type
+    local user_id = event.value.user_id
+    local data = event.value.data
+
+    if event_type == "user.created" then
+        return build_insert("users", data)
+    elseif event_type == "user.updated" then
+        return build_update("users", data, "id = " .. user_id)
+    elseif event_type == "user.deleted" then
+        return build_delete("users", "id = " .. user_id)
+    end
+
+    return nil
+end
+
+-- Batch processing with error handling
+function process_batch(messages, handler)
+    local results = {
+        processed = 0,
+        failed = 0,
+        errors = {}
+    }
+
+    for i, msg in ipairs(messages) do
+        local success, result = pcall(function()
+            return handler(msg)
+        end)
+
+        if success then
+            results.processed = results.processed + 1
+        else
+            results.failed = results.failed + 1
+            table.insert(results.errors, {
+                index = i,
+                error = result
+            })
+        end
+    end
+
+    return results
+end""",
+        "category": "integration",
+        "tags": ["event-driven", "kafka", "database", "etl", "batch-processing"]
+    }
+]
+
+
+# ============================================================
 # Initialization Functions
 # ============================================================
 
@@ -984,7 +1698,9 @@ def create_knowledge_base_documents() -> List[Document]:
         METATABLE_EXAMPLES +
         COROUTINE_EXAMPLES +
         STRING_PROCESSING_EXAMPLES +
-        TABLE_DATA_EXAMPLES
+        TABLE_DATA_EXAMPLES +
+        LOWCODE_PATTERN_EXAMPLES +  # MTS Hackathon 2026 - Low-code patterns
+        INTEGRATION_EXAMPLES  # MTS Hackathon 2026 - Integration patterns
     )
 
     for example in all_examples:

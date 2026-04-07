@@ -1,0 +1,23 @@
+Write a Lua function to validate email addresses according to RFC 5322 rules.
+
+Requirements:
+- Accept email as string parameter
+- Return true if valid, false otherwise
+- Check basic structure: local@domain.tld
+- Validate that local part doesn't start/end with dot
+- Ensure no consecutive dots in local part
+- Domain must contain at least one dot
+- Support plus addressing (user+tag@domain.com)
+
+Example valid emails:
+- user@example.com
+- john.doe@company.co.uk
+- user+tag@domain.com
+- test_user@sub.domain.org
+
+Example invalid emails:
+- invalid.email (no @)
+- @example.com (no local part)
+- user@ (no domain)
+- user..name@domain.com (consecutive dots)
+- .user@domain.com (starts with dot)

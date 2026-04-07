@@ -47,7 +47,7 @@ Inspired by [ChatDev](https://github.com/OpenBMB/ChatDev), but with **real code 
 ```
 Task → [RAG Search] → Relevant Examples → [Generator + Context] → Better Code
          ↓
-    ChromaDB (15+ curated Lua patterns)
+    ChromaDB (39 curated Lua patterns)
 ```
 
 - **Semantic search** finds similar code examples
@@ -61,6 +61,24 @@ See [docs/rag.md](docs/rag.md) for details.
 
 ## 🚀 Quick Start
 
+### Option 1: Docker (Recommended for Demo)
+
+**One-command setup with Ollama included:**
+
+```bash
+# Linux/macOS
+chmod +x scripts/setup.sh && ./scripts/setup.sh
+
+# Windows
+scripts\setup.bat
+```
+
+Opens at `http://localhost:8000` with everything pre-configured.
+
+See [docs/DOCKER.md](docs/DOCKER.md) for details.
+
+### Option 2: Local Installation
+
 ### 1. Install
 
 ```bash
@@ -69,14 +87,21 @@ cd LocalScripts_AI
 pip install -r requirements.txt
 ```
 
-### 2. Configure
+### 2. Initialize RAG Database
+
+```bash
+python -m rag.cli init
+# Initializes knowledge base with 39 Lua code examples (~30 seconds)
+```
+
+### 3. Configure
 
 ```bash
 cp .env.example .env
 # Edit .env — add your API key (see "LLM Backends" below)
 ```
 
-### 3. Run
+### 4. Run
 
 ```bash
 python main.py --task "write a fibonacci function with memoization"
