@@ -340,7 +340,7 @@
     </main>
 
     <script src="/static/app.js"></script>
-    <script src="/static/graph.js"></script>
+    <script src="/static/graph.js?v=2"></script>
     <script>
         const SESSION_ID = window.location.pathname.split('/session/')[1];
         const POLL_INTERVAL_MS = 3000;
@@ -349,9 +349,12 @@
 
         // Detect mode from session ID
         const mode = SESSION_ID.startsWith('project_') ? 'project' : 'quick';
+        console.log('Session ID:', SESSION_ID);
+        console.log('Detected mode:', mode);
 
         // Initialize graph with correct mode
         let pipelineGraph = new PipelineGraph('graphContainer', mode);
+        console.log('Graph initialized with mode:', mode, 'Nodes:', pipelineGraph.nodes.length);
 
         // Handle node clicks - show relevant files
         document.getElementById('graphContainer').addEventListener('nodeClick', async (e) => {
