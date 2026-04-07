@@ -4,24 +4,26 @@
  */
 
 class PipelineGraph {
-    constructor(containerId) {
+    constructor(containerId, mode = 'quick') {
         this.container = d3.select(`#${containerId}`);
         this.width = 900;
         this.height = 500;
         this.currentNode = null;
         this.history = [];
         this.nodeStats = {}; // Track execution count and timing per node
+        this.mode = mode;
 
-        this.nodes = [
+        // Quick mode: Generator → Validator → Reviewer
+        this.quickNodes = [
             { id: 'start', label: 'START', x: 80, y: 250, type: 'start' },
-            { id: 'generate', label: 'Generator', x: 250, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
-            { id: 'validate', label: 'Validator', x: 450, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
-            { id: 'review', label: 'Reviewer', x: 650, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
-            { id: 'fail', label: 'FAIL', x: 450, y: 380, type: 'end', color: '#ef4444' },
+            { id: 'generate', label: 'Generator', x: 280, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
+            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
+            { id: 'review', label: 'Reviewer', x: 680, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
+            { id: 'fail', label: 'FAIL', x: 480, y: 380, type: 'end', color: '#ef4444' },
             { id: 'end', label: 'SUCCESS', x: 820, y: 250, type: 'end', color: '#10b981' }
         ];
 
-        this.edges = [
+        this.quickEdges = [
             { from: 'start', to: 'generate', label: '' },
             { from: 'generate', to: 'validate', label: '' },
             { from: 'validate', to: 'review', label: 'OK' },
@@ -30,6 +32,37 @@ class PipelineGraph {
             { from: 'review', to: 'end', label: 'approved' },
             { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' }
         ];
+
+        // Project mode: Architect → Decomposer → Generator → Validator → Reviewer → Evolver
+        this.projectNodes = [
+            { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
+            { id: 'architect', label: 'Architect', x: 160, y: 180, type: 'agent', agent: 'architect', desc: 'Designs system architecture' },
+            { id: 'decomposer', label: 'Decomposer', x: 160, y: 320, type: 'agent', agent: 'decomposer', desc: 'Breaks down tasks' },
+            { id: 'generate', label: 'Generator', x: 320, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code' },
+            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code' },
+            { id: 'review', label: 'Reviewer', x: 640, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check' },
+            { id: 'evolver', label: 'Evolver', x: 760, y: 180, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines' },
+            { id: 'fail', label: 'FAIL', x: 480, y: 400, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 840, y: 250, type: 'end', color: '#10b981' }
+        ];
+
+        this.projectEdges = [
+            { from: 'start', to: 'architect', label: '' },
+            { from: 'start', to: 'decomposer', label: '' },
+            { from: 'architect', to: 'generate', label: '' },
+            { from: 'decomposer', to: 'generate', label: '' },
+            { from: 'generate', to: 'validate', label: '' },
+            { from: 'validate', to: 'review', label: 'OK' },
+            { from: 'validate', to: 'generate', label: 'errors', curve: true, type: 'retry' },
+            { from: 'validate', to: 'fail', label: 'max iter', type: 'fail' },
+            { from: 'review', to: 'evolver', label: 'optimize' },
+            { from: 'review', to: 'end', label: 'done' },
+            { from: 'evolver', to: 'end', label: '' },
+            { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' }
+        ];
+
+        this.nodes = this.mode === 'project' ? this.projectNodes : this.quickNodes;
+        this.edges = this.mode === 'project' ? this.projectEdges : this.quickEdges;
 
         this.init();
     }
@@ -227,13 +260,33 @@ class PipelineGraph {
         if (edge.curve) {
             // Curved path for feedback loops
             const midX = (from.x + to.x) / 2;
-            const midY = from.y + 100;
+            const midY = from.y + 120;
             return `M ${from.x + nodeRadius} ${from.y} Q ${midX} ${midY} ${to.x - nodeRadius} ${to.y}`;
         }
 
         if (edge.from === 'validate' && edge.to === 'fail') {
             // Downward path
             return `M ${from.x} ${from.y + nodeRadius} L ${to.x} ${to.y - 25}`;
+        }
+
+        // For project mode: handle architect/decomposer to generator
+        if ((edge.from === 'architect' || edge.from === 'decomposer') && edge.to === 'generate') {
+            return `M ${from.x + nodeRadius} ${from.y} L ${to.x - nodeRadius} ${to.y}`;
+        }
+
+        // For project mode: handle review to evolver
+        if (edge.from === 'review' && edge.to === 'evolver') {
+            return `M ${from.x + nodeRadius/2} ${from.y - nodeRadius/2} L ${to.x - nodeRadius/2} ${to.y + nodeRadius/2}`;
+        }
+
+        // For project mode: handle evolver to end
+        if (edge.from === 'evolver' && edge.to === 'end') {
+            return `M ${from.x + nodeRadius/2} ${from.y + nodeRadius/2} L ${to.x - 25} ${to.y}`;
+        }
+
+        // For project mode: handle start to architect/decomposer
+        if (edge.from === 'start' && (edge.to === 'architect' || edge.to === 'decomposer')) {
+            return `M ${from.x + 25} ${from.y} L ${to.x - nodeRadius} ${to.y}`;
         }
 
         return `M ${from.x + nodeRadius} ${from.y} L ${to.x - nodeRadius} ${to.y}`;
@@ -245,12 +298,21 @@ class PipelineGraph {
 
         if (edge.curve) {
             const midX = (from.x + to.x) / 2;
-            const midY = from.y + 100;
+            const midY = from.y + 120;
             return { x: midX, y: midY + 5 };
         }
 
         if (edge.from === 'validate' && edge.to === 'fail') {
             return { x: from.x + 30, y: (from.y + to.y) / 2 };
+        }
+
+        // For diagonal edges in project mode
+        if ((edge.from === 'architect' || edge.from === 'decomposer') && edge.to === 'generate') {
+            return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 10 };
+        }
+
+        if (edge.from === 'review' && edge.to === 'evolver') {
+            return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 10 };
         }
 
         return {
@@ -366,9 +428,12 @@ class PipelineGraph {
 
     getAgentIcon(agent) {
         const icons = {
+            architect: '🏗',
+            decomposer: '🔨',
             generator: '⚡',
             validator: '✓',
-            reviewer: '👁'
+            reviewer: '👁',
+            evolver: '🔄'
         };
         return icons[agent] || '●';
     }
@@ -425,9 +490,12 @@ class PipelineGraph {
         // Update status
         const statusMap = {
             'start': 'Starting...',
+            'architect': 'Designing architecture',
+            'decomposer': 'Breaking down tasks',
             'generate': 'Generating code',
             'validate': 'Validating code',
             'review': 'Reviewing quality',
+            'evolver': 'Optimizing code',
             'end': 'Completed ✓',
             'fail': 'Failed ✗'
         };
@@ -593,5 +661,15 @@ class PipelineGraph {
 
     getStats() {
         return this.nodeStats;
+    }
+
+    switchMode(mode) {
+        this.mode = mode;
+        this.nodes = this.mode === 'project' ? this.projectNodes : this.quickNodes;
+        this.edges = this.mode === 'project' ? this.projectEdges : this.quickEdges;
+
+        // Clear and redraw
+        this.svg.selectAll('*').remove();
+        this.init();
     }
 }

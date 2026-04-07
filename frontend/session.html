@@ -347,8 +347,11 @@
 
         document.getElementById('headerSessionId').textContent = SESSION_ID;
 
-        // Initialize graph
-        let pipelineGraph = new PipelineGraph('graphContainer');
+        // Detect mode from session ID
+        const mode = SESSION_ID.startsWith('project_') ? 'project' : 'quick';
+
+        // Initialize graph with correct mode
+        let pipelineGraph = new PipelineGraph('graphContainer', mode);
 
         // Handle node clicks - show relevant files
         document.getElementById('graphContainer').addEventListener('nodeClick', async (e) => {
