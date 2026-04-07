@@ -129,12 +129,19 @@ def make_nodes(
             return {"review": feedback, "status": "generating"}
 
     def node_fail(state: AgentState) -> dict:
-        """Terminal failure — max iterations reached."""
+        """Terminal failure — max iterations reached with errors."""
         if node_callback:
             node_callback("fail", state)
-        print(f"\n[Pipeline] Max iterations ({state['max_iterations']}) reached.")
-        _save_final(state, "Max iterations reached — partial result saved.")
-        return {"status": "failed"}
+
+        # Check if we have valid code (no errors)
+        if state.get("errors") is None and state.get("code"):
+            print(f"\n[Pipeline] Max iterations ({state['max_iterations']}) reached, but code is valid.")
+            _save_final(state, "Max iterations reached — code is valid but may need improvements.")
+            return {"status": "partial"}
+        else:
+            print(f"\n[Pipeline] Max iterations ({state['max_iterations']}) reached with errors.")
+            _save_final(state, "Max iterations reached — code has errors.")
+            return {"status": "failed"}
 
     return node_generate, node_validate, node_review, node_fail
 
