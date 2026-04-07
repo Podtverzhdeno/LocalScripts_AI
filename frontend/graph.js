@@ -255,8 +255,8 @@ class PipelineGraph {
 
         if (!from || !to) return '';
 
-        // Card dimensions: width=110, height=60, so half-width=55, half-height=30
-        const cardHalfWidth = 55;
+        // Card dimensions: width=140, height=70, so half-width=70, half-height=35
+        const cardHalfWidth = 70;
         const circleRadius = 24;
 
         const fromRadius = (from.type === 'start' || from.type === 'end') ? circleRadius : cardHalfWidth;
@@ -271,7 +271,7 @@ class PipelineGraph {
 
         if (edge.from === 'validate' && edge.to === 'fail') {
             // Downward path
-            return `M ${from.x} ${from.y + 30} L ${to.x} ${to.y - circleRadius}`;
+            return `M ${from.x} ${from.y + 35} L ${to.x} ${to.y - circleRadius}`;
         }
 
         // For project mode: handle architect/decomposer to generator
@@ -281,12 +281,12 @@ class PipelineGraph {
 
         // For project mode: handle review to evolver
         if (edge.from === 'review' && edge.to === 'evolver') {
-            return `M ${from.x + fromRadius/2} ${from.y - 30} L ${to.x - toRadius/2} ${to.y + 30}`;
+            return `M ${from.x + fromRadius/2} ${from.y - 35} L ${to.x - toRadius/2} ${to.y + 35}`;
         }
 
         // For project mode: handle evolver to end
         if (edge.from === 'evolver' && edge.to === 'end') {
-            return `M ${from.x + fromRadius/2} ${from.y + 30} L ${to.x - circleRadius} ${to.y}`;
+            return `M ${from.x + fromRadius/2} ${from.y + 35} L ${to.x - circleRadius} ${to.y}`;
         }
 
         // For project mode: handle start to architect/decomposer
@@ -355,26 +355,51 @@ class PipelineGraph {
                 self.hideTooltip();
             });
 
-        // Draw agent nodes as rounded rectangles (cards)
+        // Draw agent nodes as rounded rectangles (cards) - larger, more prominent
         nodeEnter.filter(d => d.type === 'agent')
             .append('rect')
             .attr('class', 'node-card')
-            .attr('x', -55)
-            .attr('y', -30)
-            .attr('width', 110)
-            .attr('height', 60)
-            .attr('rx', 10)
-            .attr('ry', 10)
-            .attr('fill', d => `${d.color}15`)
+            .attr('x', -70)
+            .attr('y', -35)
+            .attr('width', 140)
+            .attr('height', 70)
+            .attr('rx', 8)
+            .attr('ry', 8)
+            .attr('fill', 'rgba(15, 23, 42, 0.95)')
             .attr('stroke', d => d.color)
-            .attr('stroke-width', 2);
+            .attr('stroke-width', 2)
+            .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))');
+
+        // Agent icon circle background
+        nodeEnter.filter(d => d.type === 'agent')
+            .append('circle')
+            .attr('cx', -45)
+            .attr('cy', 0)
+            .attr('r', 18)
+            .attr('fill', d => d.color)
+            .attr('opacity', 0.2);
+
+        // Agent icon text
+        nodeEnter.filter(d => d.type === 'agent')
+            .append('text')
+            .attr('x', -45)
+            .attr('y', 0)
+            .attr('text-anchor', 'middle')
+            .attr('dy', 5)
+            .style('font-size', '16px')
+            .style('font-weight', '700')
+            .style('fill', d => d.color)
+            .style('pointer-events', 'none')
+            .text(d => this.getAgentIcon(d.agent));
 
         // Agent labels
         nodeEnter.filter(d => d.type === 'agent')
             .append('text')
-            .attr('text-anchor', 'middle')
+            .attr('x', -15)
+            .attr('y', 0)
+            .attr('text-anchor', 'start')
             .attr('dy', 5)
-            .style('font-size', '13px')
+            .style('font-size', '14px')
             .style('font-weight', '600')
             .style('fill', '#fff')
             .style('pointer-events', 'none')
@@ -404,7 +429,7 @@ class PipelineGraph {
         nodeEnter.filter(d => d.type === 'agent')
             .append('g')
             .attr('class', 'exec-count')
-            .attr('transform', 'translate(45, -20)')
+            .attr('transform', 'translate(60, -25)')
             .style('opacity', 0)
             .call(g => {
                 g.append('circle')
@@ -426,8 +451,8 @@ class PipelineGraph {
         nodeEnter.append('circle')
             .attr('class', 'status-indicator')
             .attr('r', 0)
-            .attr('cx', -45)
-            .attr('cy', -20)
+            .attr('cx', -60)
+            .attr('cy', -25)
             .attr('fill', '#10b981')
             .style('opacity', 0);
     }
@@ -558,11 +583,11 @@ class PipelineGraph {
             const glowFilter = nodeId === 'fail' ? 'url(#glow-red)' : 'url(#glow-green)';
 
             if (nodeData && nodeData.type === 'agent') {
-                // Highlight card
+                // Highlight card with glow
                 this.nodeGroup.select(`.node-${nodeId} .node-card`)
-                    .attr('stroke', nodeId === 'fail' ? '#ef4444' : nodeData.color)
+                    .attr('stroke', nodeData.color)
                     .attr('stroke-width', 3)
-                    .style('filter', 'url(#glow-green)')
+                    .style('filter', 'drop-shadow(0 0 20px ' + nodeData.color + ')')
                     .transition()
                     .duration(200)
                     .attr('stroke-width', 4)
@@ -657,7 +682,7 @@ class PipelineGraph {
         this.nodeGroup.selectAll('.node-card')
             .attr('stroke', d => d.color)
             .attr('stroke-width', 2)
-            .style('filter', 'none');
+            .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))');
 
         this.nodeGroup.selectAll('.node-circle')
             .attr('stroke', d => d.color || 'rgba(255,255,255,0.3)')
