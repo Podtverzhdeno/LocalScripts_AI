@@ -823,6 +823,142 @@ print(doubled)  -- 2 4 6 8 10""",
 ]
 
 
+
+# ============================================================
+# Tabular Data Processing Examples
+# ============================================================
+
+TABLE_DATA_EXAMPLES = [
+    {
+        "description": "Processing tabular data with headers - skip first row",
+        "code": """-- Data with header row
+local data = {
+    {"Name", "Age", "City"},      -- Header row
+    {"Alice", 30, "New York"},
+    {"Bob", 25, "Los Angeles"},
+    {"Charlie", 35, "Chicago"}
+}
+
+-- Filter by age, skipping header
+local function filterByAge(data, minAge, maxAge)
+    local results = {}
+    for i = 2, #data do  -- Start from 2 to skip header
+        local row = data[i]
+        local age = row[2]
+        if age >= minAge and age <= maxAge then
+            table.insert(results, row)
+        end
+    end
+    return results
+end
+
+local filtered = filterByAge(data, 26, 34)
+for _, row in ipairs(filtered) do
+    print(row[1], row[2], row[3])
+end""",
+        "category": "table_data",
+        "tags": ["table", "data", "filter", "header", "csv"]
+    },
+    {
+        "description": "Safe data filtering with type checking",
+        "code": """local function filterData(data, predicate)
+    local results = {}
+    for i, row in ipairs(data) do
+        -- Skip header (first row) or non-table rows
+        if i > 1 and type(row) == "table" then
+            if predicate(row) then
+                table.insert(results, row)
+            end
+        end
+    end
+    return results
+end
+
+-- Example: filter by numeric age
+local data = {
+    {"Name", "Age", "City"},
+    {"Alice", "30", "New York"},
+    {"Bob", "25", "Los Angeles"}
+}
+
+local filtered = filterData(data, function(row)
+    local age = tonumber(row[2])
+    return age and age >= 26 and age <= 34
+end)""",
+        "category": "table_data",
+        "tags": ["table", "filter", "type-check", "safe"]
+    },
+    {
+        "description": "Table data with column mapping",
+        "code": """-- Define column indices for readability
+local COL = {
+    NAME = 1,
+    AGE = 2,
+    CITY = 3
+}
+
+local data = {
+    {"Name", "Age", "City"},
+    {"Alice", 30, "New York"},
+    {"Bob", 25, "Los Angeles"}
+}
+
+-- Process data using column constants
+for i = 2, #data do  -- Skip header
+    local row = data[i]
+    local name = row[COL.NAME]
+    local age = row[COL.AGE]
+    local city = row[COL.CITY]
+
+    if age >= 25 then
+        print(string.format("%s (%d) from %s", name, age, city))
+    end
+end""",
+        "category": "table_data",
+        "tags": ["table", "columns", "constants", "readable"]
+    },
+    {
+        "description": "CSV-like data handler class",
+        "code": """local DataHandler = {}
+DataHandler.__index = DataHandler
+
+function DataHandler.new(data, hasHeader)
+    local self = setmetatable({}, DataHandler)
+    self.data = data
+    self.hasHeader = hasHeader or true
+    self.startRow = hasHeader and 2 or 1
+    return self
+end
+
+function DataHandler:filter(columnIndex, predicate)
+    local results = {}
+    for i = self.startRow, #self.data do
+        local row = self.data[i]
+        local value = row[columnIndex]
+        if predicate(value) then
+            table.insert(results, row)
+        end
+    end
+    return results
+end
+
+-- Usage
+local data = {
+    {"Name", "Age", "City"},
+    {"Alice", 30, "New York"},
+    {"Bob", 25, "Los Angeles"}
+}
+
+local handler = DataHandler.new(data, true)
+local adults = handler:filter(2, function(age)
+    return age >= 18
+end)""",
+        "category": "table_data",
+        "tags": ["table", "class", "oop", "csv", "handler"]
+    }
+]
+
+
 # ============================================================
 # Initialization Functions
 # ============================================================
@@ -847,7 +983,8 @@ def create_knowledge_base_documents() -> List[Document]:
         FILE_IO_EXAMPLES +
         METATABLE_EXAMPLES +
         COROUTINE_EXAMPLES +
-        STRING_PROCESSING_EXAMPLES
+        STRING_PROCESSING_EXAMPLES +
+        TABLE_DATA_EXAMPLES
     )
 
     for example in all_examples:

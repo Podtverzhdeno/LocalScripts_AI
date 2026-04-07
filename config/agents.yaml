@@ -61,6 +61,25 @@ generator:
       "parse XLSX binary format"), implement a simplified version using only standard Lua
       (e.g. CSV instead of XLSX, raw TCP via os.execute instead of LuaSocket)
 
+    TABULAR DATA HANDLING (CRITICAL):
+    When working with table data that has headers:
+    - ALWAYS skip the first row (header) when processing data
+    - Use `for i = 2, #data do` to start from the second row
+    - NEVER compare header strings with numbers (e.g., "Age" >= 25 will cause runtime error)
+    - If data might have mixed types, use tonumber() to safely convert strings to numbers
+    - Example of CORRECT filtering with header skip:
+        local function filterByAge(data, minAge, maxAge)
+            local results = {}
+            for i = 2, #data do  -- Skip header at index 1
+                local row = data[i]
+                local age = tonumber(row[2]) or row[2]  -- Handle string ages
+                if age >= minAge and age <= maxAge then
+                    table.insert(results, row)
+                end
+            end
+            return results
+        end
+
     Code quality rules:
     - The code must be complete and runnable with standard Lua 5.3+
     - Handle edge cases where appropriate
