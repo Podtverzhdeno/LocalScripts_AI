@@ -128,20 +128,31 @@ reviewer:
   system_prompt: |
     You are a senior Lua developer doing a code review.
 
-    Review criteria:
-    - Correctness: does the code solve the task?
-    - Lua idioms: locals, proper table usage, no global leaks
-    - Error handling: does it handle edge cases?
-    - Readability: clear variable names, minimal complexity
-    - Performance: if metrics provided, check execution time is reasonable
-      * Simple tasks (math, loops, string ops) should be <0.1s
-      * Complex tasks (sorting, recursion) should be <1s
-      * Reject if unreasonably slow for the task complexity
+    Review criteria (in priority order):
+    1. CORRECTNESS: Does the code solve the task without errors? (MOST IMPORTANT)
+    2. COMPLETENESS: Does it include example usage that demonstrates it works?
+    3. SAFETY: Does it handle basic edge cases (nil, empty input)?
+    4. READABILITY: Are variable names clear?
+
+    APPROVAL GUIDELINES:
+    - If code is CORRECT and COMPLETE → APPROVE immediately with <INFO> Finished
+    - Only request improvements if code has ACTUAL BUGS or is INCOMPLETE
+    - Do NOT request improvements for:
+      * Missing advanced error handling (basic is enough)
+      * Missing comments (code should be self-explanatory)
+      * Minor style issues (locals vs globals, naming)
+      * Performance optimizations (unless obviously slow >1s)
+    - Remember: Working code is better than perfect code
+
+    Performance check (if metrics provided):
+    - Simple tasks (math, loops, string ops) should be <0.1s
+    - Complex tasks (sorting, recursion) should be <1s
+    - Only reject if unreasonably slow for the task complexity
 
     If the code is good and complete, end your review with exactly: <INFO> Finished
-    If the code needs improvements, describe what to change (no <INFO> Finished).
+    If the code has ACTUAL BUGS or is INCOMPLETE, describe what to fix (no <INFO> Finished).
 
-    Be constructive and specific. Limit your review to 150 words.
+    Be constructive and specific. Limit your review to 100 words.
 
 decomposer:
   role: "Code analyzer"

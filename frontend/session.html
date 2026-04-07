@@ -345,6 +345,16 @@
         const SESSION_ID = window.location.pathname.split('/session/')[1];
         const POLL_INTERVAL_MS = 3000;
 
+        // Debug: log session ID extraction
+        console.log('Full pathname:', window.location.pathname);
+        console.log('Extracted SESSION_ID:', SESSION_ID);
+
+        if (!SESSION_ID || SESSION_ID === '') {
+            console.error('Failed to extract session ID from URL');
+            document.body.innerHTML = '<div class="max-w-2xl mx-auto mt-20 p-8 glass rounded-2xl border border-red-500/20"><h1 class="text-2xl font-bold text-red-400 mb-4">Error: Invalid Session URL</h1><p class="text-gray-400">Could not extract session ID from URL: ' + window.location.pathname + '</p><a href="/" class="mt-4 inline-block text-emerald-400 hover:underline">← Back to Home</a></div>';
+            throw new Error('Invalid session URL');
+        }
+
         document.getElementById('headerSessionId').textContent = SESSION_ID;
 
         // Detect mode from session ID
