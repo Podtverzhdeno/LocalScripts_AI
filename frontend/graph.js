@@ -470,6 +470,13 @@ class PipelineGraph {
         const timestamp = new Date().toLocaleTimeString();
         this.history.push({ node: nodeId, iteration, timestamp: Date.now() });
 
+        // Check if node exists in current mode
+        const nodeData = this.nodes.find(n => n.id === nodeId);
+        if (!nodeData) {
+            console.warn(`Node ${nodeId} not found in ${this.mode} mode graph`);
+            return;
+        }
+
         // Update stats
         if (!this.nodeStats[nodeId]) {
             this.nodeStats[nodeId] = { count: 0, lastTime: null };

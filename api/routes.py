@@ -190,6 +190,19 @@ async def _run_project_pipeline_async(
 
     loop = asyncio.get_running_loop()
 
+    # Create callback to broadcast node events
+    def node_callback(node_name: str, state: dict):
+        """Broadcast node_enter events for frontend visualization."""
+        asyncio.run_coroutine_threadsafe(
+            _broadcast(session_id, {
+                "event": "node_enter",
+                "node": node_name,
+                "agent": node_name,
+                "iteration": state.get("iteration", 0),
+            }),
+            loop
+        )
+
     try:
         final_state = await loop.run_in_executor(
             None,
@@ -198,6 +211,7 @@ async def _run_project_pipeline_async(
                 project_dir=project_dir,
                 max_iterations=max_iterations,
                 evolutions=evolutions,
+                node_callback=node_callback,
             ),
         )
         status = final_state.get("status", "failed")

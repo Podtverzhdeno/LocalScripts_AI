@@ -28,6 +28,7 @@ def run_project_pipeline(
     project_dir: str,
     max_iterations: int = 3,
     evolutions: int = 3,
+    node_callback=None,
 ) -> dict:
     """
     Run full project mode pipeline.
@@ -37,6 +38,7 @@ def run_project_pipeline(
         project_dir: Output directory (workspace/project_TIMESTAMP/)
         max_iterations: Max retries per file generation
         evolutions: Number of evolution cycles (0 = no evolution, -1 = auto)
+        node_callback: Callback for node events (for frontend visualization)
 
     Returns:
         Final project state with all metadata
@@ -48,6 +50,10 @@ def run_project_pipeline(
     print("\n" + "="*60)
     print("  PHASE 1: Architecture Planning")
     print("="*60)
+
+    # Notify frontend: architect node
+    if node_callback:
+        node_callback("architect", {"iteration": 0})
 
     # Phase 1: Architect plans the project
     architect = ArchitectAgent(get_llm("architect"))
@@ -65,6 +71,10 @@ def run_project_pipeline(
     print("\n" + "="*60)
     print("  PHASE 2: Code Generation")
     print("="*60)
+
+    # Notify frontend: decomposer node
+    if node_callback:
+        node_callback("decomposer", {"iteration": 0})
 
     # Initialize RAG if enabled
     rag_system = None
@@ -90,6 +100,10 @@ def run_project_pipeline(
 
     for file_name in plan['order']:
         print(f"\n[Generator] Creating {file_name}...")
+
+        # Notify frontend: generator node
+        if node_callback:
+            node_callback("generate", {"iteration": len(generated_files) + 1})
 
         # Find file info from plan
         file_info = next((f for f in plan['files'] if f['name'] == file_name), None)
@@ -124,6 +138,10 @@ def run_project_pipeline(
 
                 print(f"  [Generator] Generated {len(code)} chars")
 
+                # Notify frontend: validator node
+                if node_callback:
+                    node_callback("validate", {"iteration": iteration})
+
                 # Validate
                 is_valid, error_explanation = validator.validate(
                     code=code, task=task, iteration=iteration
@@ -139,6 +157,10 @@ def run_project_pipeline(
                         break
 
                 print(f"  [Validator] OK")
+
+                # Notify frontend: reviewer node
+                if node_callback:
+                    node_callback("review", {"iteration": iteration})
 
                 # Review
                 is_done, feedback = reviewer.review(
@@ -219,6 +241,10 @@ def run_project_pipeline(
         print("\n" + "="*60)
         print(f"  PHASE 4: Evolution ({evolutions} cycles)")
         print("="*60)
+
+        # Notify frontend: evolver node
+        if node_callback:
+            node_callback("evolver", {"iteration": 0})
 
         evolver = EvolverAgent(get_llm("evolver"))
         evolution_history = []
