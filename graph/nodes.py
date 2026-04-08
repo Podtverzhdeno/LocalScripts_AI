@@ -29,9 +29,13 @@ def make_nodes(
     llm_generator: BaseChatModel | None = None,
     llm_validator: BaseChatModel | None = None,
     llm_reviewer: BaseChatModel | None = None,
+    llm_test_generator: BaseChatModel | None = None,
+    llm_retriever: BaseChatModel | None = None,
+    llm_approver: BaseChatModel | None = None,
     rag_system=None,
     node_callback=None,
     code_callback=None,
+    use_rag_workflow=True,
 ):
     """
     Factory that returns node functions with LLM injected via closure.
@@ -40,27 +44,42 @@ def make_nodes(
         - llm_generator: model for code generation (default: llm)
         - llm_validator: model for error explanation (default: llm)
         - llm_reviewer:  model for code review (default: llm)
+        - llm_test_generator: model for test case generation (default: llm)
+        - llm_retriever: model for RAG search (default: llm)
+        - llm_approver: model for RAG approval (default: llm)
         - rag_system: RAG system for retrieval-augmented generation
+        - use_rag_workflow: Enable new RAG workflow with retriever+approver agents
 
     If a per-agent LLM is not provided, falls back to the shared `llm`.
     """
     from agents.generator import GeneratorAgent
     from agents.validator import ValidatorAgent
     from agents.reviewer import ReviewerAgent
+    from agents.test_generator import TestGeneratorAgent
+    from agents.retriever import RetrieverAgent
+    from agents.approver import ApproverAgent
 
     _gen_llm = llm_generator or llm
     _val_llm = llm_validator or llm
     _rev_llm = llm_reviewer or llm
+    _test_llm = llm_test_generator or llm
+    _ret_llm = llm_retriever or llm
+    _app_llm = llm_approver or llm
 
     def node_generate(state: AgentState) -> dict:
         """Generator node — writes or fixes Lua code."""
         if node_callback:
             node_callback("generate", state)
+
+        # Get approved template from state if available
+        approved_template = state.get("approved_template")
+
         agent = GeneratorAgent(_gen_llm, rag_system=rag_system)
         code = agent.generate(
             task=state["task"],
             errors=state.get("errors"),
             review=state.get("review"),
+            approved_template=approved_template,
         )
         iteration = state["iterations"] + 1
         runner = _get_runner(state)
@@ -79,17 +98,124 @@ def make_nodes(
             "status": "validating",
         }
 
+    def node_rag_retrieve(state: AgentState) -> dict:
+        """RAG Retriever node — searches knowledge base for relevant examples."""
+        if node_callback:
+            node_callback("rag_retrieve", state)
+
+        if not rag_system or not use_rag_workflow:
+            print("[RAG] Workflow disabled, skipping retrieval")
+            return {"rag_results": None, "status": "generating"}
+
+        print("\n[RAG] Starting retrieval workflow...")
+        retriever = RetrieverAgent(_ret_llm, rag_system=rag_system)
+
+        # Search for top 5 examples
+        results = retriever.search(task=state["task"], k=5)
+
+        if not results:
+            print("[RAG] No examples found, proceeding without template")
+            return {"rag_results": None, "approved_template": None, "status": "generating"}
+
+        # Format for approver
+        formatted_examples = retriever.format_examples_for_approval(results)
+
+        return {
+            "rag_results": results,
+            "rag_formatted": formatted_examples,
+            "status": "rag_approving",
+        }
+
+    def node_rag_approve(state: AgentState) -> dict:
+        """RAG Approver node — evaluates relevance of retrieved examples."""
+        if node_callback:
+            node_callback("rag_approve", state)
+
+        rag_results = state.get("rag_results")
+        rag_formatted = state.get("rag_formatted")
+
+        if not rag_results or not rag_formatted:
+            print("[RAG] No results to approve")
+            return {"approved_template": None, "status": "generating"}
+
+        print("\n[RAG] Evaluating retrieved examples...")
+        approver = ApproverAgent(_app_llm)
+
+        # Evaluate relevance
+        decision = approver.evaluate(
+            task=state["task"],
+            retrieved_examples=rag_formatted,
+        )
+
+        if decision["approved"] and decision["selected_examples"]:
+            # Extract approved examples
+            approved_docs = approver.extract_approved_examples(
+                rag_results,
+                decision["selected_examples"]
+            )
+
+            # Format approved examples as template
+            if rag_system:
+                approved_template = rag_system.format_context(
+                    [doc for doc, _ in approved_docs],
+                    max_length=2000
+                )
+            else:
+                approved_template = rag_formatted
+
+            print(f"[RAG] ✓ APPROVED - Using {len(decision['selected_examples'])} example(s) as template")
+            return {
+                "approved_template": approved_template,
+                "rag_decision": decision,
+                "status": "generating",
+            }
+        else:
+            print(f"[RAG] ✗ REJECTED - {decision['reason']}")
+            print("[RAG] Generating from scratch")
+            return {
+                "approved_template": None,
+                "rag_decision": decision,
+                "status": "generating",
+            }
+
     def node_validate(state: AgentState) -> dict:
-        """Validator node — runs luac + lua, explains errors via LLM."""
+        """Validator node — runs luac + lua with functional tests, explains errors via LLM."""
         if node_callback:
             node_callback("validate", state)
         runner = _get_runner(state)
         agent = ValidatorAgent(_val_llm, runner)
-        is_valid, error_explanation = agent.validate(
-            code=state["code"],
-            task=state["task"],
-            iteration=state["iterations"],
-        )
+
+        # Generate functional test cases on first iteration
+        test_code = state.get("test_code")
+        if not test_code and state["iterations"] == 1:
+            print("[Validator] Generating functional test cases...")
+            test_agent = TestGeneratorAgent(_test_llm)
+            test_code = test_agent.generate_tests(
+                task=state["task"],
+                code=state["code"]
+            )
+            # Save test cases to session
+            test_path = Path(state["session_dir"]) / "test_cases.lua"
+            test_path.write_text(test_code, encoding="utf-8")
+            print(f"[Validator] Generated {len(test_code)} chars of test cases")
+
+        # Run validation with functional tests
+        if test_code:
+            is_valid, error_explanation, test_results = agent.validate_with_tests(
+                code=state["code"],
+                test_code=test_code,
+                task=state["task"],
+                iteration=state["iterations"],
+            )
+            print(f"[Validator] Tests: {test_results['passed']}/{test_results['total']} passed")
+        else:
+            # Fallback to basic validation (backward compatibility)
+            is_valid, error_explanation = agent.validate(
+                code=state["code"],
+                task=state["task"],
+                iteration=state["iterations"],
+            )
+            test_results = None
 
         # Get profiling metrics from last execution
         profile_metrics = None
@@ -104,10 +230,21 @@ def make_nodes(
 
         if is_valid:
             print(f"[Validator] OK - Code valid")
-            return {"errors": None, "status": "reviewing", "profile_metrics": profile_metrics}
+            return {
+                "errors": None,
+                "status": "reviewing",
+                "profile_metrics": profile_metrics,
+                "test_code": test_code,
+                "test_results": test_results
+            }
         else:
             print(f"[Validator] ERROR - Retrying")
-            return {"errors": error_explanation, "status": "generating"}
+            return {
+                "errors": error_explanation,
+                "status": "generating",
+                "test_code": test_code,
+                "test_results": test_results
+            }
 
     def node_review(state: AgentState) -> dict:
         """Reviewer node — quality check, may request improvements."""
@@ -135,7 +272,7 @@ def make_nodes(
         _save_final(state, "Max iterations reached — partial result saved.")
         return {"status": "failed"}
 
-    return node_generate, node_validate, node_review, node_fail
+    return node_generate, node_validate, node_review, node_fail, node_rag_retrieve, node_rag_approve
 
 
 def _save_final(state: AgentState, review_text: str) -> None:
@@ -143,10 +280,22 @@ def _save_final(state: AgentState, review_text: str) -> None:
     if state.get("code"):
         (session / "final.lua").write_text(state["code"], encoding="utf-8")
 
-    # Build report with profiling metrics
+    # Build report with profiling metrics and test results
     report = f"# LocalScript Report\n\n## Task\n{state['task']}\n\n"
     report += f"## Iterations\n{state['iterations']}\n\n"
     report += f"## Status\n{state['status']}\n\n"
+
+    # Add test results if available
+    if state.get("test_results"):
+        results = state["test_results"]
+        report += f"## Functional Tests\n"
+        report += f"- Total: {results['total']}\n"
+        report += f"- Passed: {results['passed']}\n"
+        report += f"- Failed: {results['failed']}\n"
+        if results['passed'] == results['total']:
+            report += f"- Status: ✅ All tests passed\n\n"
+        else:
+            report += f"- Status: ❌ Some tests failed\n\n"
 
     # Add profiling metrics if available
     if state.get("profile_metrics"):

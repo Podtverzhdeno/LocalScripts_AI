@@ -10,10 +10,26 @@ llm:
   ollama_base_url: http://localhost:11434
 
 # Per-agent defaults (overridden by GENERATOR_BACKEND, REVIEWER_MODEL, etc. in .env)
+# Optimized for 7B-12B models: use local models for simple tasks, cloud for complex reasoning
 agents:
-  generator: {}
-  validator: {}
-  reviewer: {}
+  generator:
+    # backend: ollama
+    # model: qwen2.5-coder:7b    # Fast local code generation
+  validator:
+    # backend: ollama
+    # model: qwen2.5-coder:7b    # Fast local validation
+  reviewer:
+    # backend: openrouter
+    # model: openai/gpt-4o-mini  # Stronger model for quality review
+  retriever:
+    # backend: ollama
+    # model: qwen2.5-coder:7b    # Fast local RAG search
+  approver:
+    # backend: openrouter
+    # model: openai/gpt-4o-mini  # Stronger model for relevance evaluation
+  test_generator:
+    # backend: ollama
+    # model: qwen2.5-coder:7b    # Fast local test generation
 
 # Reasoning strategies — enhance agent output quality via multi-step LLM reasoning.
 # Applied to the generator agent before producing code.
@@ -33,13 +49,16 @@ workspace:
 
 # RAG (Retrieval-Augmented Generation) configuration
 # Reduces hallucinations by retrieving relevant code examples
+# NEW: Enhanced workflow with Retriever + Approver agents for 7B-12B models
 rag:
   enabled: true                          # Enable/disable RAG system
+  use_new_workflow: true                 # Use Retriever+Approver agents (recommended for small models)
   persist_directory: .veai/chroma        # Where to store vector DB
   embedding_model: all-MiniLM-L6-v2      # Fast, lightweight embeddings (384 dim)
   collection_name: lua_knowledge         # ChromaDB collection name
-  retrieval_k: 3                         # Number of examples to retrieve
-  max_context_length: 1500               # Max chars for RAG context
+  retrieval_k: 5                         # Number of examples to retrieve (increased for approver)
+  max_context_length: 2000               # Max chars for RAG context (increased for better templates)
+  approval_threshold: 0.6                # Minimum confidence for approver to accept examples
 
 # External MCP tools that agents can use during generation (optional).
 # Powered by langchain-mcp-adapters (official LangChain <-> MCP bridge).
