@@ -83,27 +83,8 @@ IMPORTANT: Return ONLY the JSON object. No markdown, no explanations, no code bl
 JSON:"""
 
         try:
-            # Add timeout to prevent hanging
-            import signal
-
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Approver evaluation timed out")
-
-            # Set 30 second timeout (only on Unix-like systems)
-            try:
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(30)
-            except AttributeError:
-                # Windows doesn't support SIGALRM, skip timeout
-                pass
-
-            response = self.invoke(prompt)
-
-            # Cancel timeout
-            try:
-                signal.alarm(0)
-            except AttributeError:
-                pass
+            # Use cross-platform timeout (30 seconds)
+            response = self.invoke(prompt, timeout=30.0)
 
             # Try to parse JSON response
             # Remove markdown code fences if present

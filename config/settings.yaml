@@ -8,6 +8,7 @@ llm:
   model: deepseek-r1:8b      # fallback if LLM_MODEL not in .env (lightweight default)
   temperature: 0.2
   ollama_base_url: http://localhost:11434
+  ollama_timeout: 60         # HTTP timeout for Ollama requests (seconds)
 
 # Per-agent defaults (overridden by GENERATOR_BACKEND, REVIEWER_MODEL, etc. in .env)
 # Optimized for 7B-12B models: use local models for simple tasks, cloud for complex reasoning

@@ -6,6 +6,8 @@ Supports optional reasoning strategies (reflect, cot) for enhanced output.
 
 import logging
 import re
+import threading
+from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.language_models import BaseChatModel
@@ -33,14 +35,50 @@ class BaseAgent:
         self.llm = llm
         self.system_prompt = get_agent_prompt(role)
 
-    def invoke(self, user_message: str) -> str:
-        """Send a message to the LLM with the agent's system prompt."""
+    def invoke(self, user_message: str, timeout: Optional[float] = None) -> str:
+        """
+        Send a message to the LLM with the agent's system prompt.
+
+        Args:
+            user_message: The message to send
+            timeout: Optional timeout in seconds (cross-platform)
+
+        Returns:
+            LLM response content
+
+        Raises:
+            TimeoutError: If timeout is exceeded
+        """
         messages = [
             SystemMessage(content=self.system_prompt),
             HumanMessage(content=user_message),
         ]
-        response = self.llm.invoke(messages)
-        return response.content.strip()
+
+        if timeout is None:
+            response = self.llm.invoke(messages)
+            return response.content.strip()
+
+        # Cross-platform timeout using threading
+        result = {"response": None, "error": None}
+
+        def _invoke():
+            try:
+                result["response"] = self.llm.invoke(messages)
+            except Exception as e:
+                result["error"] = e
+
+        thread = threading.Thread(target=_invoke, daemon=True)
+        thread.start()
+        thread.join(timeout=timeout)
+
+        if thread.is_alive():
+            logger.warning(f"[{self.role}] LLM call timed out after {timeout}s")
+            raise TimeoutError(f"LLM call timed out after {timeout} seconds")
+
+        if result["error"]:
+            raise result["error"]
+
+        return result["response"].content.strip()
 
     def invoke_with_strategy(self, user_message: str) -> str:
         """

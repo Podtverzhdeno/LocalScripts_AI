@@ -378,8 +378,8 @@
 
     </main>
 
-    <script src="/static/app.js"></script>
-    <script src="/static/graph.js?v=8"></script>
+    <script src="/static/app.js?v=9"></script>
+    <script src="/static/graph.js?v=9"></script>
     <script>
         const SESSION_ID = window.location.pathname.split('/session/')[1];
         const POLL_INTERVAL_MS = 3000;
@@ -898,22 +898,6 @@
             outputEl.appendChild(span);
 
             // Auto-scroll to bottom
-            outputEl.scrollTop = outputEl.scrollHeight;
-
-            // Update stats
-            const elapsed = (Date.now() - inferenceState.startTime) / 1000;
-            const tokensPerSec = inferenceState.tokenCount / elapsed;
-            const totalChars = inferenceState.tokens.join('').length;
-
-            document.getElementById('tokenCount').textContent = `${inferenceState.tokenCount} tokens`;
-            document.getElementById('inferenceTokensPerSec').textContent = tokensPerSec.toFixed(1);
-            document.getElementById('inferenceElapsed').textContent = `${elapsed.toFixed(1)}s`;
-            document.getElementById('inferenceChars').textContent = totalChars;
-        }
-            span.className = 'inline-block animate-fadeIn';
-            outputEl.appendChild(span);
-
-            // Auto-scroll
             outputEl.scrollTop = outputEl.scrollHeight;
 
             // Update stats

@@ -103,6 +103,9 @@ async def _run_pipeline_async(
     """Run the LangGraph pipeline in a thread and broadcast progress."""
     from graph.pipeline import run_pipeline
 
+    # Small delay to allow WebSocket to connect before pipeline starts
+    await asyncio.sleep(0.5)
+
     _sessions[session_id]["status"] = "running"
     await _broadcast(session_id, {"event": "started", "session_id": session_id})
 
@@ -184,6 +187,9 @@ async def _run_project_pipeline_async(
 ) -> None:
     """Run the project mode pipeline in a thread and broadcast progress."""
     from graph.project_pipeline import run_project_pipeline
+
+    # Small delay to allow WebSocket to connect before pipeline starts
+    await asyncio.sleep(0.5)
 
     _sessions[session_id]["status"] = "running"
     await _broadcast(session_id, {"event": "started", "session_id": session_id, "mode": "project"})
