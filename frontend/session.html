@@ -63,6 +63,45 @@
         /* Smooth transitions */
         .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+
+        /* Token streaming animation */
+        .token-appear {
+            animation: tokenAppear 0.1s ease-out;
+            display: inline;
+        }
+        @keyframes tokenAppear {
+            from {
+                opacity: 0;
+                transform: translateY(2px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Inference output styling */
+        #inferenceOutput {
+            line-height: 1.6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Scrollbar styling */
+        #inferenceOutput::-webkit-scrollbar {
+            width: 8px;
+        }
+        #inferenceOutput::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+        }
+        #inferenceOutput::-webkit-scrollbar-thumb {
+            background: rgba(16,185,129,0.3);
+            border-radius: 4px;
+        }
+        #inferenceOutput::-webkit-scrollbar-thumb:hover {
+            background: rgba(16,185,129,0.5);
+        }
     </style>
 </head>
 <body class="bg-[#0a0f1a] text-gray-100 min-h-screen bg-grid">
@@ -577,6 +616,36 @@
                         // Update inference viewer with current agent
                         if (msg.agent) {
                             updateInferenceAgent(msg.agent, msg.iteration);
+                            // Auto-open inference viewer on first agent (except start)
+                            if (msg.node !== 'start' && !document.getElementById('inferenceModal').classList.contains('hidden') === false) {
+                                // Only auto-open if not already open
+                                const modal = document.getElementById('inferenceModal');
+                                if (modal.classList.contains('hidden')) {
+                                    showInferenceViewer();
+                                }
+                            }
+                        }
+                    }
+                    // Handle completion
+                    else if (msg.event === 'completed') {
+                        stopInferenceStreaming();
+                        pipelineGraph.setActiveNode(msg.status === 'done' ? 'end' : 'fail', msg.iteration);
+                        refreshAll();
+                    }
+                    // Handle errors
+                    else if (msg.event === 'error') {
+                        stopInferenceStreaming();
+                        appendLog(logEl, `ERROR: ${msg.detail}`);
+                    }
+                    // Handle started
+                    else if (msg.event === 'started') {
+                        appendLog(logEl, `Session started: ${msg.session_id}`);
+                        pipelineGraph.reset();
+                    }
+                } catch (err) {
+                    console.error('WS parse error:', err);
+                }
+            };
                         }
                     } else if (msg.event === 'progress' || msg.event === 'status') {
                         document.getElementById('iterationText').textContent = msg.iteration;
@@ -652,40 +721,68 @@
                     html += `<div class="flex items-center gap-2 mb-3">`;
                     html += `<div class="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center text-xs font-bold text-emerald-400">${iter}</div>`;
                     html += `<span class="text-sm font-semibold text-gray-300">Iteration ${iter}</span>`;
+                    html += `<span class="text-xs text-gray-500 ml-auto">${events.length} steps</span>`;
                     html += `</div>`;
                     html += `<div class="space-y-2">`;
 
-                    events.forEach(event => {
+                    events.forEach((event, idx) => {
                         const nodeData = pipelineGraph.nodes.find(n => n.id === event.node);
                         const icon = nodeData ? pipelineGraph.getAgentIcon(nodeData.agent) : '●';
                         const label = nodeData ? nodeData.label : event.node;
+                        const color = nodeData ? nodeData.color : '#6b7280';
                         const time = new Date(event.timestamp).toLocaleTimeString();
 
-                        html += `<div class="flex items-center gap-3 text-xs">`;
-                        html += `<span class="text-lg">${icon}</span>`;
-                        html += `<span class="text-gray-300 flex-1">${escapeHtml(label)}</span>`;
-                        html += `<span class="text-gray-600 font-mono">${time}</span>`;
+                        // Calculate duration to next event
+                        let duration = '';
+                        if (idx < events.length - 1) {
+                            const nextEvent = events[idx + 1];
+                            const diff = nextEvent.timestamp - event.timestamp;
+                            if (diff > 0) {
+                                duration = `<span class="text-gray-600 text-[10px]">(${(diff/1000).toFixed(1)}s)</span>`;
+                            }
+                        }
+
+                        html += `<div class="flex items-center gap-3 text-xs p-2 rounded-lg hover:bg-white/5 transition-colors">`;
+                        html += `<div class="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style="background: ${color}20; color: ${color};">${icon}</div>`;
+                        html += `<div class="flex-1">`;
+                        html += `<div class="text-gray-300 font-medium">${escapeHtml(label)}</div>`;
+                        html += `<div class="text-gray-600 text-[10px] mt-0.5">${event.node}</div>`;
+                        html += `</div>`;
+                        html += `<div class="text-right">`;
+                        html += `<div class="text-gray-500 font-mono text-[10px]">${time}</div>`;
+                        html += `${duration}`;
+                        html += `</div>`;
                         html += `</div>`;
                     });
 
                     html += `</div></div>`;
                 });
 
-                // Stats summary
+                // Stats summary - include ALL agents
                 html += `<div class="glass rounded-xl border border-white/5 p-4 mt-4">`;
                 html += `<h4 class="text-sm font-semibold text-gray-400 mb-3">Agent Statistics</h4>`;
                 html += `<div class="grid grid-cols-3 gap-3">`;
 
-                ['generator', 'validator', 'reviewer'].forEach(agent => {
-                    const nodeId = agent;
-                    const stat = stats[nodeId] || { count: 0 };
-                    const icon = pipelineGraph.getAgentIcon(agent);
-                    html += `<div class="text-center">`;
-                    html += `<div class="text-2xl mb-1">${icon}</div>`;
-                    html += `<div class="text-lg font-bold text-emerald-400">${stat.count}</div>`;
-                    html += `<div class="text-[10px] text-gray-500 capitalize">${agent}</div>`;
-                    html += `</div>`;
-                });
+                // Get all agents that have been executed
+                const executedAgents = Object.keys(stats).filter(nodeId => stats[nodeId].count > 0);
+
+                if (executedAgents.length === 0) {
+                    html += `<div class="col-span-3 text-center text-gray-500 text-xs py-4">No agents executed yet</div>`;
+                } else {
+                    executedAgents.forEach(nodeId => {
+                        const nodeData = pipelineGraph.nodes.find(n => n.id === nodeId);
+                        const stat = stats[nodeId];
+                        const icon = nodeData ? pipelineGraph.getAgentIcon(nodeData.agent) : '●';
+                        const label = nodeData ? nodeData.label : nodeId;
+                        const color = nodeData ? nodeData.color : '#6b7280';
+
+                        html += `<div class="text-center p-3 rounded-lg" style="background: ${color}10;">`;
+                        html += `<div class="text-2xl mb-1">${icon}</div>`;
+                        html += `<div class="text-lg font-bold" style="color: ${color};">${stat.count}</div>`;
+                        html += `<div class="text-[10px] text-gray-500">${escapeHtml(label)}</div>`;
+                        html += `</div>`;
+                    });
+                }
 
                 html += `</div></div>`;
                 html += '</div>';
@@ -735,37 +832,48 @@
             const agentData = {
                 rag_retrieve: {
                     name: 'Retriever',
-                    desc: 'Searching knowledge base',
+                    desc: 'Searching knowledge base for relevant examples',
                     icon: '🔍',
-                    color: 'cyan'
+                    color: 'cyan',
+                    placeholder: 'Searching ChromaDB...'
                 },
                 rag_approve: {
                     name: 'Approver',
-                    desc: 'Evaluating examples',
+                    desc: 'Evaluating relevance of retrieved examples',
                     icon: '✓',
-                    color: 'pink'
+                    color: 'pink',
+                    placeholder: 'Analyzing examples...'
                 },
                 generate: {
                     name: 'Generator',
-                    desc: 'Writing Lua code',
+                    desc: 'Writing Lua code based on task',
                     icon: '✍️',
-                    color: 'emerald'
+                    color: 'emerald',
+                    placeholder: 'Generating code...'
                 },
                 validate: {
                     name: 'Validator',
-                    desc: 'Compiling and executing',
+                    desc: 'Compiling and executing code',
                     icon: '🔍',
-                    color: 'cyan'
+                    color: 'cyan',
+                    placeholder: 'Running luac and lua...'
                 },
                 review: {
                     name: 'Reviewer',
-                    desc: 'Checking code quality',
+                    desc: 'Checking code quality and best practices',
                     icon: '👁️',
-                    color: 'violet'
+                    color: 'violet',
+                    placeholder: 'Reviewing code...'
                 }
             };
 
-            const data = agentData[agent] || { name: agent, desc: 'Processing', icon: '⚡', color: 'gray' };
+            const data = agentData[agent] || {
+                name: agent,
+                desc: 'Processing',
+                icon: '⚡',
+                color: 'gray',
+                placeholder: 'Working...'
+            };
 
             document.getElementById('inferenceAgent').textContent = data.name;
             document.getElementById('inferenceAgentName').textContent = data.name;
@@ -775,8 +883,14 @@
             document.getElementById('inferenceSpinner').classList.remove('hidden');
             document.getElementById('streamingIndicator').classList.remove('hidden');
 
-            // Clear output for new agent
-            document.getElementById('inferenceOutput').innerHTML = '<span class="text-gray-500">Generating...</span>';
+            // Clear output for new agent with better placeholder
+            document.getElementById('inferenceOutput').innerHTML = `<span class="text-gray-500">${data.placeholder}</span>`;
+
+            // Reset stats
+            document.getElementById('tokenCount').textContent = '0 tokens';
+            document.getElementById('inferenceTokensPerSec').textContent = '—';
+            document.getElementById('inferenceElapsed').textContent = '—';
+            document.getElementById('inferenceChars').textContent = '—';
         }
 
         function appendInferenceToken(token) {
@@ -794,9 +908,25 @@
                 outputEl.textContent = '';
             }
 
-            // Append token
+            // Append token with animation
             const span = document.createElement('span');
             span.textContent = token;
+            span.className = 'token-appear';
+            outputEl.appendChild(span);
+
+            // Auto-scroll to bottom
+            outputEl.scrollTop = outputEl.scrollHeight;
+
+            // Update stats
+            const elapsed = (Date.now() - inferenceState.startTime) / 1000;
+            const tokensPerSec = inferenceState.tokenCount / elapsed;
+            const totalChars = inferenceState.tokens.join('').length;
+
+            document.getElementById('tokenCount').textContent = `${inferenceState.tokenCount} tokens`;
+            document.getElementById('inferenceTokensPerSec').textContent = tokensPerSec.toFixed(1);
+            document.getElementById('inferenceElapsed').textContent = `${elapsed.toFixed(1)}s`;
+            document.getElementById('inferenceChars').textContent = totalChars;
+        }
             span.className = 'inline-block animate-fadeIn';
             outputEl.appendChild(span);
 
