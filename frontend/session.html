@@ -646,23 +646,6 @@
                     console.error('WS parse error:', err);
                 }
             };
-                        }
-                    } else if (msg.event === 'progress' || msg.event === 'status') {
-                        document.getElementById('iterationText').textContent = msg.iteration;
-                        loadFiles();
-                    } else if (msg.event === 'completed' || msg.event === 'finished') {
-                        stopInferenceStreaming();
-                        if (msg.status === 'done') {
-                            pipelineGraph.setActiveNode('end', msg.iteration);
-                        } else if (msg.status === 'failed') {
-                            pipelineGraph.setActiveNode('fail', msg.iteration);
-                        }
-                        refreshAll();
-                    }
-                } catch {
-                    appendLog(logEl, evt.data);
-                }
-            };
         }
 
         function appendLog(el, text) {
