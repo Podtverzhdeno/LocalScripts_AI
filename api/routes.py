@@ -129,7 +129,9 @@ async def _run_pipeline_async(
     # Code streaming callback - simulates token streaming by sending code in chunks
     def code_callback(code: str, agent: str):
         """Called after code generation to simulate streaming."""
-        chunk_size = 10  # characters per chunk
+        chunk_size = 5  # characters per chunk (smaller = more realistic)
+        delay = 0.02  # 20ms between chunks (more realistic typing speed)
+
         for i in range(0, len(code), chunk_size):
             chunk = code[i:i+chunk_size]
             asyncio.run_coroutine_threadsafe(
@@ -140,9 +142,9 @@ async def _run_pipeline_async(
                 }),
                 loop
             )
-            # Small delay to simulate streaming
+            # Small delay to simulate streaming (non-blocking in thread)
             import time
-            time.sleep(0.01)
+            time.sleep(delay)
 
     try:
         final_state = await loop.run_in_executor(

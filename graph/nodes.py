@@ -240,6 +240,10 @@ def make_nodes(
             test_path.write_text(test_code, encoding="utf-8")
             print(f"[Validator] Generated {len(test_code)} chars of test cases")
 
+            # Stream test code generation
+            if code_callback:
+                code_callback(test_code, "test_generator")
+
         # Run validation with functional tests
         if test_code:
             is_valid, error_explanation, test_results = agent.validate_with_tests(
@@ -249,6 +253,10 @@ def make_nodes(
                 iteration=state["iterations"],
             )
             print(f"[Validator] Tests: {test_results['passed']}/{test_results['total']} passed")
+
+            # Stream error explanation if validation failed
+            if not is_valid and error_explanation and code_callback:
+                code_callback(error_explanation, "validator")
         else:
             # Fallback to basic validation (backward compatibility)
             is_valid, error_explanation = agent.validate(
@@ -297,6 +305,10 @@ def make_nodes(
             task=state["task"],
             profile_metrics=state.get("profile_metrics"),
         )
+
+        # Stream feedback if improvements requested
+        if not is_done and feedback and code_callback:
+            code_callback(feedback, "reviewer")
         if is_done:
             print("[Reviewer] APPROVED")
             _save_final({**state, "status": "done"}, feedback)

@@ -378,8 +378,8 @@
 
     </main>
 
-    <script src="/static/app.js?v=9"></script>
-    <script src="/static/graph.js?v=9"></script>
+    <script src="/static/app.js?v=10"></script>
+    <script src="/static/graph.js?v=10"></script>
     <script>
         const SESSION_ID = window.location.pathname.split('/session/')[1];
         const POLL_INTERVAL_MS = 3000;
@@ -840,6 +840,27 @@
                     icon: '🔍',
                     color: 'cyan',
                     placeholder: 'Running luac and lua...'
+                },
+                test_generator: {
+                    name: 'Test Generator',
+                    desc: 'Creating functional test cases',
+                    icon: '🧪',
+                    color: 'yellow',
+                    placeholder: 'Generating tests...'
+                },
+                validator: {
+                    name: 'Validator',
+                    desc: 'Analyzing errors and test results',
+                    icon: '⚠️',
+                    color: 'orange',
+                    placeholder: 'Explaining errors...'
+                },
+                reviewer: {
+                    name: 'Reviewer',
+                    desc: 'Providing code improvement feedback',
+                    icon: '💬',
+                    color: 'purple',
+                    placeholder: 'Reviewing quality...'
                 },
                 review: {
                     name: 'Reviewer',
