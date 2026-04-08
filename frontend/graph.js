@@ -13,18 +13,22 @@ class PipelineGraph {
         this.nodeStats = {}; // Track execution count and timing per node
         this.mode = mode;
 
-        // Quick mode: Generator → Validator → Reviewer
+        // Quick mode: RAG Retrieve → RAG Approve → Generator → Validator → Reviewer
         this.quickNodes = [
             { id: 'start', label: 'START', x: 80, y: 250, type: 'start' },
-            { id: 'generate', label: 'Generator', x: 280, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
-            { id: 'validate', label: 'Validator', x: 480, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'review', label: 'Reviewer', x: 680, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'fail', label: 'FAIL', x: 480, y: 400, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 820, y: 250, type: 'end', color: '#10b981' }
+            { id: 'rag_retrieve', label: 'Retriever', x: 220, y: 250, type: 'agent', agent: 'retriever', desc: 'Searches knowledge base', color: '#06b6d4' },
+            { id: 'rag_approve', label: 'Approver', x: 360, y: 250, type: 'agent', agent: 'approver', desc: 'Evaluates relevance', color: '#ec4899' },
+            { id: 'generate', label: 'Generator', x: 500, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'validate', label: 'Validator', x: 640, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
+            { id: 'review', label: 'Reviewer', x: 780, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'fail', label: 'FAIL', x: 640, y: 400, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 920, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.quickEdges = [
-            { from: 'start', to: 'generate', label: '' },
+            { from: 'start', to: 'rag_retrieve', label: '' },
+            { from: 'rag_retrieve', to: 'rag_approve', label: '' },
+            { from: 'rag_approve', to: 'generate', label: '' },
             { from: 'generate', to: 'validate', label: '' },
             { from: 'validate', to: 'review', label: 'OK' },
             { from: 'validate', to: 'generate', label: 'errors', curve: true, type: 'retry' },
@@ -502,7 +506,9 @@ class PipelineGraph {
             validator: 'V',
             reviewer: 'R',
             integrator: 'I',
-            evolver: 'E'
+            evolver: 'E',
+            retriever: '🔍',
+            approver: '✓'
         };
         return icons[agent] || '●';
     }
@@ -569,6 +575,8 @@ class PipelineGraph {
             'architect': 'Planning architecture',
             'specification': 'Creating specifications',
             'decomposer': 'Analyzing code',
+            'rag_retrieve': 'Searching knowledge base',
+            'rag_approve': 'Evaluating examples',
             'generate': 'Generating code',
             'validate': 'Validating code',
             'review': 'Reviewing quality',
@@ -739,15 +747,199 @@ class PipelineGraph {
     }
 
     onNodeClick(node) {
-        // Emit custom event for parent to handle
-        const event = new CustomEvent('nodeClick', {
-            detail: {
-                nodeId: node.id,
-                agent: node.agent,
-                stats: this.nodeStats[node.id] || { count: 0 }
+        // Show agent info modal
+        this.showAgentInfoModal(node);
+    }
+
+    showAgentInfoModal(node) {
+        const agentInfo = this.getAgentInfo(node.agent);
+        const stats = this.nodeStats[node.id] || { count: 0, lastTime: null };
+
+        // Create modal HTML
+        const modalHTML = `
+            <div id="agentInfoModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                <div class="glass rounded-2xl border border-white/5 max-w-2xl w-full overflow-hidden">
+                    <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between" style="background: linear-gradient(135deg, ${node.color}15 0%, transparent 100%);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background: ${node.color}20; color: ${node.color};">
+                                ${this.getAgentIcon(node.agent)}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg">${node.label}</h3>
+                                <p class="text-xs text-gray-500">${agentInfo.role}</p>
+                            </div>
+                        </div>
+                        <button onclick="closeAgentInfoModal()" class="text-gray-500 hover:text-gray-300 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="px-6 py-5 space-y-4">
+                        <!-- Purpose -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-400 mb-2">Purpose</h4>
+                            <p class="text-sm text-gray-300 leading-relaxed">${agentInfo.purpose}</p>
+                        </div>
+
+                        <!-- How it works -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-400 mb-2">How It Works</h4>
+                            <ul class="text-sm text-gray-300 space-y-1.5">
+                                ${agentInfo.howItWorks.map(item => `<li class="flex items-start gap-2"><span class="text-${node.color.replace('#', '')} mt-0.5">•</span><span>${item}</span></li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <!-- Model info -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-400 mb-2">Model Configuration</h4>
+                            <p class="text-xs text-gray-400 font-mono bg-white/5 px-3 py-2 rounded-lg">${agentInfo.model}</p>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
+                            <div class="glass rounded-xl border border-white/5 p-3">
+                                <p class="text-xs text-gray-500 mb-1">Executions</p>
+                                <p class="text-2xl font-bold" style="color: ${node.color};">${stats.count}</p>
+                            </div>
+                            <div class="glass rounded-xl border border-white/5 p-3">
+                                <p class="text-xs text-gray-500 mb-1">Last Run</p>
+                                <p class="text-sm font-medium text-gray-300">${stats.lastTime || 'Never'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('agentInfoModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+
+    getAgentInfo(agent) {
+        const agentDetails = {
+            retriever: {
+                role: 'RAG Search Agent',
+                purpose: 'Searches the ChromaDB knowledge base for relevant code examples that match the current task. Uses semantic similarity to find the top-5 most relevant examples from past successful implementations.',
+                howItWorks: [
+                    'Receives the user task description',
+                    'Queries ChromaDB vector database using embeddings',
+                    'Returns top-5 examples with similarity scores',
+                    'Formats examples for Approver evaluation'
+                ],
+                model: 'Local 7B model (qwen2.5-coder:7b) - Fast retrieval'
+            },
+            approver: {
+                role: 'RAG Evaluation Agent',
+                purpose: 'Evaluates the relevance of retrieved examples and decides whether they should be used as templates. Acts as a quality gate to prevent low-quality examples from influencing code generation.',
+                howItWorks: [
+                    'Reviews examples from Retriever agent',
+                    'Analyzes relevance to current task',
+                    'Assigns confidence score (0.0-1.0)',
+                    'Approves or rejects examples based on threshold (0.6)'
+                ],
+                model: 'Cloud model (gpt-4o-mini) - Strong reasoning for evaluation'
+            },
+            generator: {
+                role: 'Code Generation Agent',
+                purpose: 'Writes Lua code based on the task description. If approved examples exist, uses them as templates. Otherwise, generates code from scratch using its training knowledge.',
+                howItWorks: [
+                    'Receives task and optional approved template',
+                    'Generates Lua code following best practices',
+                    'Strips markdown code fences',
+                    'Returns clean, executable Lua code'
+                ],
+                model: 'Local 7B model (qwen2.5-coder:7b) - Fast generation'
+            },
+            validator: {
+                role: 'Code Validation Agent',
+                purpose: 'Compiles and executes generated Lua code in a sandboxed environment. Catches syntax errors, runtime errors, and security violations before code review.',
+                howItWorks: [
+                    'Compiles code with luac',
+                    'Executes in sandboxed Lua environment',
+                    'Generates functional tests',
+                    'Reports errors or success'
+                ],
+                model: 'Local 7B model (qwen2.5-coder:7b) - Fast validation'
+            },
+            reviewer: {
+                role: 'Code Quality Agent',
+                purpose: 'Performs final quality review of validated code. Checks for code quality, performance, maintainability, and best practices. Can request improvements or approve for completion.',
+                howItWorks: [
+                    'Reviews validated code',
+                    'Checks quality and performance',
+                    'Evaluates best practices',
+                    'Approves or requests improvements'
+                ],
+                model: 'Cloud model (gpt-4o-mini) - Strong reasoning for quality review'
+            },
+            architect: {
+                role: 'Project Architecture Agent',
+                purpose: 'Plans the overall project structure for multi-file projects. Designs module organization, dependencies, and file layout.',
+                howItWorks: [
+                    'Analyzes project requirements',
+                    'Designs module structure',
+                    'Plans file organization',
+                    'Creates architecture blueprint'
+                ],
+                model: 'Configured via settings.yaml'
+            },
+            specification: {
+                role: 'Specification Agent',
+                purpose: 'Creates detailed specifications for each module in the project. Defines interfaces, data structures, and implementation requirements.',
+                howItWorks: [
+                    'Receives architecture plan',
+                    'Creates detailed specs per module',
+                    'Defines interfaces and contracts',
+                    'Prepares for implementation'
+                ],
+                model: 'Configured via settings.yaml'
+            },
+            integrator: {
+                role: 'Integration Testing Agent',
+                purpose: 'Tests integration between multiple modules in project mode. Ensures modules work together correctly.',
+                howItWorks: [
+                    'Tests module interactions',
+                    'Validates interfaces',
+                    'Checks data flow',
+                    'Reports integration issues'
+                ],
+                model: 'Configured via settings.yaml'
+            },
+            decomposer: {
+                role: 'Code Analysis Agent',
+                purpose: 'Analyzes code structure and complexity. Identifies potential issues and optimization opportunities.',
+                howItWorks: [
+                    'Analyzes code structure',
+                    'Measures complexity',
+                    'Identifies issues',
+                    'Suggests optimizations'
+                ],
+                model: 'Configured via settings.yaml'
+            },
+            evolver: {
+                role: 'Code Optimization Agent',
+                purpose: 'Optimizes and refines code for better performance and maintainability. Applies advanced optimization techniques.',
+                howItWorks: [
+                    'Reviews code performance',
+                    'Applies optimizations',
+                    'Refines implementation',
+                    'Improves maintainability'
+                ],
+                model: 'Configured via settings.yaml'
             }
-        });
-        this.container.node().dispatchEvent(event);
+        };
+
+        return agentDetails[agent] || {
+            role: 'Unknown Agent',
+            purpose: 'No information available',
+            howItWorks: [],
+            model: 'Not configured'
+        };
     }
 
     getHistory() {

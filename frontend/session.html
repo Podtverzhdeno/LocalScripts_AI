@@ -733,6 +733,18 @@
             inferenceState.tokenCount = 0;
 
             const agentData = {
+                rag_retrieve: {
+                    name: 'Retriever',
+                    desc: 'Searching knowledge base',
+                    icon: '🔍',
+                    color: 'cyan'
+                },
+                rag_approve: {
+                    name: 'Approver',
+                    desc: 'Evaluating examples',
+                    icon: '✓',
+                    color: 'pink'
+                },
                 generate: {
                     name: 'Generator',
                     desc: 'Writing Lua code',
@@ -805,6 +817,13 @@
         function stopInferenceStreaming() {
             document.getElementById('inferenceSpinner').classList.add('hidden');
             document.getElementById('streamingIndicator').classList.add('hidden');
+        }
+
+        function closeAgentInfoModal() {
+            const modal = document.getElementById('agentInfoModal');
+            if (modal) {
+                modal.remove();
+            }
         }
 
         // ── Init ──
