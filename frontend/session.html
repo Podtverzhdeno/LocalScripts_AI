@@ -144,6 +144,10 @@
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Timeline
                         </button>
+                        <button onclick="showDetailedLogs()" class="text-xs text-gray-500 hover:text-violet-400 transition-colors flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Logs
+                        </button>
                         <button onclick="pipelineGraph.reset()" class="text-xs text-gray-500 hover:text-emerald-400 transition-colors flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                             Reset
@@ -167,6 +171,30 @@
                     </button>
                 </div>
                 <div id="timelineContent" class="px-6 py-4 overflow-y-auto max-h-[60vh]"></div>
+            </div>
+        </div>
+
+        <!-- ── Detailed Logs Modal ── -->
+        <div id="logsModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+            <div class="glass rounded-2xl border border-white/5 max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+                <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <h3 class="font-semibold">Detailed Logs</h3>
+                        <span id="logsCount" class="text-xs px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">0 events</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearLogs()" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20">
+                            Clear
+                        </button>
+                        <button onclick="hideDetailedLogs()" class="text-gray-500 hover:text-gray-300 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="logsContent" class="px-6 py-4 overflow-y-auto flex-1 font-mono text-xs space-y-1">
+                    <div class="text-gray-600 text-center py-8">No logs yet. Logs will appear when pipeline starts.</div>
+                </div>
             </div>
         </div>
 
@@ -378,8 +406,8 @@
 
     </main>
 
-    <script src="/static/app.js?v=10"></script>
-    <script src="/static/graph.js?v=10"></script>
+    <script src="/static/app.js?v=11"></script>
+    <script src="/static/graph.js?v=11"></script>
     <script>
         const SESSION_ID = window.location.pathname.split('/session/')[1];
         const POLL_INTERVAL_MS = 3000;
@@ -591,14 +619,17 @@
             ws.onopen = () => {
                 appendLog(logEl, '● Connected');
                 wsStatus.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                addLog('success', 'WebSocket', 'Connected to server');
             };
             ws.onclose = () => {
                 appendLog(logEl, '● Disconnected');
                 wsStatus.className = 'w-2 h-2 rounded-full bg-gray-600';
+                addLog('info', 'WebSocket', 'Disconnected from server');
             };
             ws.onerror = () => {
                 appendLog(logEl, '● Error');
                 wsStatus.className = 'w-2 h-2 rounded-full bg-red-500';
+                addLog('error', 'WebSocket', 'Connection error');
             };
 
             ws.onmessage = (evt) => {
@@ -609,9 +640,16 @@
                     // Handle token streaming
                     if (msg.event === 'token') {
                         appendInferenceToken(msg.token);
+                        // Don't log every token (too noisy)
                     }
                     // Handle graph updates
                     else if (msg.event === 'node_enter') {
+                        addLog('info', 'Pipeline', `Entering node: ${msg.node}`, {
+                            node: msg.node,
+                            agent: msg.agent,
+                            iteration: msg.iteration,
+                            status: msg.status
+                        });
                         pipelineGraph.setActiveNode(msg.node, msg.iteration);
                         // Update inference viewer with current agent
                         if (msg.agent) {
@@ -628,22 +666,41 @@
                     }
                     // Handle completion
                     else if (msg.event === 'completed') {
+                        addLog('success', 'Pipeline', `Pipeline completed with status: ${msg.status}`, {
+                            status: msg.status,
+                            iteration: msg.iteration,
+                            files: msg.files
+                        });
                         stopInferenceStreaming();
                         pipelineGraph.setActiveNode(msg.status === 'done' ? 'end' : 'fail', msg.iteration);
                         refreshAll();
                     }
                     // Handle errors
                     else if (msg.event === 'error') {
+                        addLog('error', 'Pipeline', `Error: ${msg.detail}`, { detail: msg.detail });
                         stopInferenceStreaming();
                         appendLog(logEl, `ERROR: ${msg.detail}`);
                     }
                     // Handle started
                     else if (msg.event === 'started') {
+                        addLog('success', 'Pipeline', `Session started: ${msg.session_id}`, {
+                            session_id: msg.session_id,
+                            mode: msg.mode
+                        });
                         appendLog(logEl, `Session started: ${msg.session_id}`);
                         pipelineGraph.reset();
                     }
+                    // Handle progress updates
+                    else if (msg.event === 'progress') {
+                        addLog('debug', 'Pipeline', `Progress update`, {
+                            iteration: msg.iteration,
+                            has_final: msg.has_final,
+                            status: msg.status
+                        });
+                    }
                 } catch (err) {
                     console.error('WS parse error:', err);
+                    addLog('error', 'WebSocket', `Parse error: ${err.message}`);
                 }
             };
         }
@@ -662,14 +719,25 @@
 
         async function refreshAll() {
             try {
+                addLog('debug', 'API', `Fetching session status`);
                 const data = await api(`/api/session/${SESSION_ID}`);
+                addLog('info', 'Session', `Status: ${data.status}, Iteration: ${data.iteration}`, {
+                    status: data.status,
+                    iteration: data.iteration,
+                    has_final: data.has_final,
+                    errors: data.errors ? 'present' : 'none'
+                });
                 renderStatus(data);
                 loadFiles();
                 if (data.has_final) loadFinal();
                 if (data.status === 'done' || data.status === 'failed') {
                     if (pollTimer) clearInterval(pollTimer);
+                    addLog('info', 'Polling', 'Stopped polling (session finished)');
                 }
-            } catch (err) { console.error('Refresh error:', err); }
+            } catch (err) {
+                console.error('Refresh error:', err);
+                addLog('error', 'API', `Failed to refresh session: ${err.message}`);
+            }
         }
 
         function formatBytes(bytes) {
@@ -777,6 +845,98 @@
 
         function hideExecutionTimeline() {
             document.getElementById('timelineModal').classList.add('hidden');
+        }
+
+        // ── Detailed Logs ──
+        let detailedLogs = [];
+
+        function addLog(level, category, message, data = null) {
+            const timestamp = new Date().toISOString();
+            const log = { timestamp, level, category, message, data };
+            detailedLogs.push(log);
+
+            // Update logs modal if open
+            const modal = document.getElementById('logsModal');
+            if (!modal.classList.contains('hidden')) {
+                renderLogs();
+            }
+
+            // Update count badge
+            document.getElementById('logsCount').textContent = `${detailedLogs.length} events`;
+        }
+
+        function showDetailedLogs() {
+            renderLogs();
+            document.getElementById('logsModal').classList.remove('hidden');
+        }
+
+        function hideDetailedLogs() {
+            document.getElementById('logsModal').classList.add('hidden');
+        }
+
+        function clearLogs() {
+            detailedLogs = [];
+            document.getElementById('logsCount').textContent = '0 events';
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logsContent');
+
+            if (detailedLogs.length === 0) {
+                container.innerHTML = '<div class="text-gray-600 text-center py-8">No logs yet. Logs will appear when pipeline starts.</div>';
+                return;
+            }
+
+            const levelColors = {
+                info: 'text-cyan-400',
+                success: 'text-emerald-400',
+                warning: 'text-yellow-400',
+                error: 'text-red-400',
+                debug: 'text-gray-500'
+            };
+
+            const levelIcons = {
+                info: 'ℹ️',
+                success: '✓',
+                warning: '⚠️',
+                error: '✗',
+                debug: '🔍'
+            };
+
+            let html = '';
+            detailedLogs.forEach((log, index) => {
+                const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+                const color = levelColors[log.level] || 'text-gray-400';
+                const icon = levelIcons[log.level] || '●';
+
+                html += `<div class="flex gap-3 py-2 px-3 rounded-lg hover:bg-white/5 transition-colors border-l-2 ${log.level === 'error' ? 'border-red-500/50' : log.level === 'success' ? 'border-emerald-500/50' : 'border-transparent'}">`;
+                html += `<span class="text-gray-600 flex-shrink-0">${time}</span>`;
+                html += `<span class="flex-shrink-0">${icon}</span>`;
+                html += `<span class="text-gray-500 flex-shrink-0 min-w-[80px]">[${escapeHtml(log.category)}]</span>`;
+                html += `<span class="${color} flex-1">${escapeHtml(log.message)}</span>`;
+                if (log.data) {
+                    html += `<button onclick="toggleLogData(${index})" class="text-gray-600 hover:text-gray-400 flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>`;
+                }
+                html += `</div>`;
+
+                if (log.data) {
+                    html += `<div id="logData${index}" class="hidden ml-12 mb-2 p-3 rounded-lg bg-black/30 border border-white/5">`;
+                    html += `<pre class="text-[10px] text-gray-400 overflow-x-auto">${escapeHtml(JSON.stringify(log.data, null, 2))}</pre>`;
+                    html += `</div>`;
+                }
+            });
+
+            container.innerHTML = html;
+            // Auto-scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function toggleLogData(index) {
+            const el = document.getElementById(`logData${index}`);
+            el.classList.toggle('hidden');
         }
 
         // ── Inference Viewer ──
@@ -945,9 +1105,12 @@
         }
 
         // ── Init ──
+        addLog('info', 'System', `Session viewer initialized for: ${SESSION_ID}`);
+        addLog('info', 'System', `Mode: ${mode}`);
         refreshAll();
         connectWs();
         pollTimer = setInterval(refreshAll, POLL_INTERVAL_MS);
+        addLog('info', 'Polling', `Started polling every ${POLL_INTERVAL_MS}ms`);
     </script>
 </body>
 </html>
