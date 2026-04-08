@@ -138,43 +138,84 @@ def make_nodes(
             print("[RAG] No results to approve")
             return {"approved_template": None, "status": "generating"}
 
-        print("\n[RAG] Evaluating retrieved examples...")
-        approver = ApproverAgent(_app_llm)
+        # Check if we should skip approval (for debugging or if Approver is slow)
+        import os
+        skip_approval = os.getenv("RAG_SKIP_APPROVAL", "false").lower() == "true"
 
-        # Evaluate relevance
-        decision = approver.evaluate(
-            task=state["task"],
-            retrieved_examples=rag_formatted,
-        )
-
-        if decision["approved"] and decision["selected_examples"]:
-            # Extract approved examples
-            approved_docs = approver.extract_approved_examples(
-                rag_results,
-                decision["selected_examples"]
-            )
-
-            # Format approved examples as template
+        if skip_approval:
+            print("[RAG] ⚠️  Skipping approval (RAG_SKIP_APPROVAL=true)")
+            print("[RAG] Using all retrieved examples as template")
+            # Use all examples without approval
             if rag_system:
                 approved_template = rag_system.format_context(
-                    [doc for doc, _ in approved_docs],
+                    [doc for doc, _ in rag_results],
                     max_length=2000
                 )
             else:
                 approved_template = rag_formatted
 
-            print(f"[RAG] ✓ APPROVED - Using {len(decision['selected_examples'])} example(s) as template")
             return {
                 "approved_template": approved_template,
-                "rag_decision": decision,
+                "rag_decision": {
+                    "approved": True,
+                    "reason": "Approval skipped (RAG_SKIP_APPROVAL=true)",
+                    "selected_examples": list(range(1, len(rag_results) + 1)),
+                    "confidence": 1.0
+                },
                 "status": "generating",
             }
-        else:
-            print(f"[RAG] ✗ REJECTED - {decision['reason']}")
-            print("[RAG] Generating from scratch")
+
+        print("\n[RAG] Evaluating retrieved examples...")
+        approver = ApproverAgent(_app_llm)
+
+        try:
+            # Evaluate relevance with timeout protection
+            decision = approver.evaluate(
+                task=state["task"],
+                retrieved_examples=rag_formatted,
+            )
+
+            if decision["approved"] and decision["selected_examples"]:
+                # Extract approved examples
+                approved_docs = approver.extract_approved_examples(
+                    rag_results,
+                    decision["selected_examples"]
+                )
+
+                # Format approved examples as template
+                if rag_system:
+                    approved_template = rag_system.format_context(
+                        [doc for doc, _ in approved_docs],
+                        max_length=2000
+                    )
+                else:
+                    approved_template = rag_formatted
+
+                print(f"[RAG] ✓ APPROVED - Using {len(decision['selected_examples'])} example(s) as template")
+                return {
+                    "approved_template": approved_template,
+                    "rag_decision": decision,
+                    "status": "generating",
+                }
+            else:
+                print(f"[RAG] ✗ REJECTED - {decision['reason']}")
+                print("[RAG] Generating from scratch")
+                return {
+                    "approved_template": None,
+                    "rag_decision": decision,
+                    "status": "generating",
+                }
+        except Exception as e:
+            print(f"[RAG] ⚠️  Approval failed: {e}")
+            print("[RAG] Falling back to generation without template")
             return {
                 "approved_template": None,
-                "rag_decision": decision,
+                "rag_decision": {
+                    "approved": False,
+                    "reason": f"Approval error: {str(e)}",
+                    "selected_examples": [],
+                    "confidence": 0.0
+                },
                 "status": "generating",
             }
 

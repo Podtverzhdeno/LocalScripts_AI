@@ -57,44 +57,65 @@ class ApproverAgent(BaseAgent):
                 "confidence": 1.0
             }
 
-        prompt = f"""Task: {task}
+        prompt = f"""You are evaluating code examples for relevance.
 
+TASK: {task}
+
+RETRIEVED EXAMPLES:
 {retrieved_examples}
 
-Evaluate whether these retrieved examples are relevant and useful for the given task.
+INSTRUCTIONS:
+Evaluate if these examples are relevant for the task.
+Return ONLY a JSON object, nothing else.
 
-Consider:
-1. Do the examples demonstrate similar algorithms, patterns, or techniques needed for the task?
-2. Are the examples close enough to serve as a template or starting point?
-3. Would using these examples improve code quality compared to generating from scratch?
+RESPONSE FORMAT (copy this structure exactly):
+{{"approved": false, "reason": "not relevant", "selected_examples": [], "confidence": 0.5}}
 
-CRITICAL: Return ONLY valid JSON, no explanations, no markdown.
+RULES:
+- Set "approved" to true only if examples are highly relevant
+- Set "approved" to false if examples are not relevant or task is different
+- "selected_examples" is a list of numbers (1, 2, 3, etc.) - which examples to use
+- "confidence" is a number between 0.0 and 1.0
+- "reason" is a short explanation (max 10 words)
 
-Output format:
-{{
-  "approved": true/false,
-  "reason": "Brief explanation (1-2 sentences)",
-  "selected_examples": [1, 2],
-  "confidence": 0.85
-}}
+IMPORTANT: Return ONLY the JSON object. No markdown, no explanations, no code blocks.
 
-Rules:
-- approved: true if examples are relevant and should be used as templates
-- approved: false if examples are not relevant or task is too different
-- selected_examples: list of example numbers (1-based) to use (empty if not approved)
-- confidence: 0.0-1.0, how confident you are in this decision
-- reason: explain why you approved or rejected
-
-Respond with JSON only:"""
+JSON:"""
 
         try:
+            # Add timeout to prevent hanging
+            import signal
+
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Approver evaluation timed out")
+
+            # Set 30 second timeout (only on Unix-like systems)
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(30)
+            except AttributeError:
+                # Windows doesn't support SIGALRM, skip timeout
+                pass
+
             response = self.invoke(prompt)
+
+            # Cancel timeout
+            try:
+                signal.alarm(0)
+            except AttributeError:
+                pass
 
             # Try to parse JSON response
             # Remove markdown code fences if present
             response = response.strip()
             if response.startswith("```"):
                 response = self.strip_code_fences(response)
+
+            # Try to extract JSON from response if it contains extra text
+            if "{" in response and "}" in response:
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                response = response[start:end]
 
             result = json.loads(response)
 
@@ -111,9 +132,18 @@ Respond with JSON only:"""
 
             return result
 
+        except TimeoutError as e:
+            logger.error(f"[Approver] Evaluation timed out after 30s")
+            # Fallback: reject on timeout
+            return {
+                "approved": False,
+                "reason": "Evaluation timed out, generating from scratch",
+                "selected_examples": [],
+                "confidence": 0.0
+            }
         except json.JSONDecodeError as e:
             logger.error(f"[Approver] Failed to parse JSON response: {e}")
-            logger.error(f"[Approver] Raw response: {response[:200]}")
+            logger.error(f"[Approver] Raw response: {response[:500]}")
             # Fallback: reject if we can't parse
             return {
                 "approved": False,
