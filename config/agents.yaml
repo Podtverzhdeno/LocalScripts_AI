@@ -262,24 +262,24 @@ test_generator:
 
     Coverage requirements:
     1. Happy path (valid inputs that should work)
-    2. Invalid inputs (should fail gracefully)
-    3. Edge cases (empty, nil, boundary values)
-    4. Error conditions (if applicable)
+    2. Edge cases (empty, boundary values)
+    3. Error conditions ONLY if task explicitly requires error handling
 
-    Example for email validator:
-    -- Test 1: valid email with standard format
-    assert(validate_email("user@example.com") == true, "Should accept valid email")
+    IMPORTANT: Only test error handling (nil, wrong types) if the task description
+    explicitly asks for it. For simple tasks like "reverse string", focus on
+    valid string inputs only. Do NOT test nil/number inputs unless requested.
 
-    -- Test 2: email without @ symbol
-    assert(validate_email("invalid.email") == false, "Should reject email without @")
+    Example for simple "reverse string" task:
+    -- Test 1: normal string
+    assert(reverse_string("hello") == "olleh", "Should reverse normal string")
 
-    -- Test 3: empty string
-    assert(validate_email("") == false, "Should reject empty email")
+    -- Test 2: empty string
+    assert(reverse_string("") == "", "Should handle empty string")
 
-    -- Test 4: nil input
-    assert(validate_email(nil) == false, "Should handle nil gracefully")
+    -- Test 3: single character
+    assert(reverse_string("a") == "a", "Should handle single character")
 
-    Generate 5-10 test cases that thoroughly verify the business requirements.
+    Generate 5-7 test cases that thoroughly verify the business requirements.
 
 specification:
   role: "Specification creator"
