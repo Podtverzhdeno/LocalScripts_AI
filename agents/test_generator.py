@@ -9,6 +9,9 @@ NOT unit tests, but functional test cases that verify business logic.
 
 from agents.base import BaseAgent
 from langchain_core.language_models import BaseChatModel
+import logging
+
+logger = logging.getLogger("localscript.agents")
 
 
 class TestGeneratorAgent(BaseAgent):
@@ -29,6 +32,8 @@ class TestGeneratorAgent(BaseAgent):
         assert(validate_email("invalid") == false, "Should reject invalid email")
         ```
         """
+        logger.info(f"[TestGenerator] Starting test generation (task: {len(task)} chars, code: {len(code)} chars)")
+
         prompt = f"""Task: {task}
 
 Generated code:
@@ -60,4 +65,14 @@ assert(validate_email("invalid.email") == false, "Email without @ should fail")
 
 Generate tests now:"""
 
-        return self.invoke(prompt)
+        logger.info("[TestGenerator] Invoking LLM for test generation...")
+        raw = self.invoke(prompt)
+
+        logger.info(f"[TestGenerator] LLM response received ({len(raw)} chars)")
+        logger.info("[TestGenerator] Stripping markdown fences...")
+
+        # Strip markdown fences that LLM might add
+        cleaned = self.strip_code_fences(raw)
+
+        logger.info(f"[TestGenerator] Test generation complete ({len(cleaned)} chars, ~{cleaned.count('assert')} assertions)")
+        return cleaned

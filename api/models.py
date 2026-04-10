@@ -16,6 +16,16 @@ class RunTaskRequest(BaseModel):
     evolutions: int = Field(default=3, ge=0, le=10, description="Evolution cycles (project mode only)")
 
 
+class ClarificationAnswersRequest(BaseModel):
+    answers: dict[str, str] = Field(..., description="Map of question index to answer")
+
+
+class CheckpointDecisionRequest(BaseModel):
+    action: str = Field(..., description="Action: 'approve', 'reject', 'alternatives', 'save_to_kb'")
+    feedback: str | None = Field(None, description="User feedback for 'reject' action")
+    selected_alternative: int | None = Field(None, description="Index of selected alternative")
+
+
 # ── Responses ─────────────────────────────────────────────────────────────────
 
 class RunTaskResponse(BaseModel):

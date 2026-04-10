@@ -83,8 +83,10 @@ IMPORTANT: Return ONLY the JSON object. No markdown, no explanations, no code bl
 JSON:"""
 
         try:
-            # Use cross-platform timeout (30 seconds)
-            response = self.invoke(prompt, timeout=30.0)
+            # Timeout optimized for 7B models (60 seconds - prevents hanging while allowing completion)
+            logger.info("[Approver] Starting evaluation...")
+            response = self.invoke(prompt, timeout=60.0)
+            logger.info(f"[Approver] LLM response received ({len(response)} chars)")
 
             # Try to parse JSON response
             # Remove markdown code fences if present

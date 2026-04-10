@@ -21,6 +21,8 @@ from api.models import (
     SessionFile,
     SessionListItem,
     SessionStatus,
+    ClarificationAnswersRequest,
+    CheckpointDecisionRequest,
 )
 
 logger = logging.getLogger("localscript.api")
@@ -428,6 +430,72 @@ async def get_session_file(session_id: str, filename: str):
     if not target.is_file():
         raise HTTPException(status_code=404, detail=f"File '{filename}' not found")
     return {"filename": filename, "content": target.read_text(encoding="utf-8")}
+
+
+@router.post(
+    "/session/{session_id}/clarification",
+    summary="Submit clarification answers",
+)
+async def submit_clarification(session_id: str, body: ClarificationAnswersRequest):
+    """
+    Submit user answers to clarification questions.
+
+    Body: {"answers": {"0": "JWT tokens", "1": "Yes"}}
+    """
+    if session_id not in _sessions:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
+
+    # Store answers in session state
+    _sessions[session_id]["user_answers"] = body.answers
+    _sessions[session_id]["needs_clarification"] = False
+
+    logger.info(f"Received clarification answers for session {session_id}: {len(body.answers)} answer(s)")
+
+    # Broadcast to trigger pipeline continuation
+    await _broadcast(session_id, {
+        "event": "clarification_submitted",
+        "answers": body.answers,
+    })
+
+    return {"status": "ok", "message": "Clarification answers received"}
+
+
+@router.post(
+    "/session/{session_id}/checkpoint",
+    summary="Submit checkpoint decision",
+)
+async def submit_checkpoint(session_id: str, body: CheckpointDecisionRequest):
+    """
+    Submit user's checkpoint decision.
+
+    Body: {
+        "action": "approve" | "reject" | "alternatives" | "save_to_kb",
+        "feedback": "optional feedback for reject action",
+        "selected_alternative": 0  # for alternative selection
+    }
+    """
+    if session_id not in _sessions:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
+
+    # Store decision in session state
+    _sessions[session_id]["checkpoint_action"] = body.action
+    _sessions[session_id]["checkpoint_pending"] = False
+
+    if body.action == "reject" and body.feedback:
+        _sessions[session_id]["user_feedback"] = body.feedback
+
+    if body.action == "alternatives" and body.selected_alternative is not None:
+        _sessions[session_id]["selected_alternative"] = body.selected_alternative
+
+    logger.info(f"Received checkpoint decision for session {session_id}: {body.action}")
+
+    # Broadcast to trigger pipeline continuation
+    await _broadcast(session_id, {
+        "event": "checkpoint_submitted",
+        "action": body.action,
+    })
+
+    return {"status": "ok", "message": f"Checkpoint {body.action} received"}
 
 
 # ── WebSocket Endpoint ────────────────────────────────────────────────────────

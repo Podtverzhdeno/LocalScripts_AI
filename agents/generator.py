@@ -2,6 +2,7 @@
 Generator Agent — writes Lua code with RAG support.
 On retry: receives previous errors and fixes them (like ChatDev's Programmer + error context).
 Uses RAG to retrieve relevant examples and reduce hallucinations.
+Supports template-based generation when approved examples are provided.
 """
 
 from agents.base import BaseAgent
@@ -18,25 +19,49 @@ class GeneratorAgent(BaseAgent):
         self.rag_system = rag_system
         self.use_rag = rag_system is not None
 
-    def generate(self, task: str, errors: str | None = None, review: str | None = None) -> str:
-        """Generate or fix Lua code based on task + optional feedback."""
+    def generate(
+        self,
+        task: str,
+        errors: str | None = None,
+        review: str | None = None,
+        approved_template: str | None = None
+    ) -> str:
+        """
+        Generate or fix Lua code based on task + optional feedback.
+
+        Args:
+            task: User's task description
+            errors: Previous compilation/runtime errors (if retry)
+            review: Reviewer feedback (if retry)
+            approved_template: Approved RAG examples to use as template (if available)
+        """
+        logger.info(f"[Generator] Starting generation (task: {len(task)} chars, errors: {bool(errors)}, review: {bool(review)}, template: {bool(approved_template)})")
+
         parts = [f"Task: {task}"]
 
-        # Add RAG context if available
-        if self.use_rag and not errors and not review:
+        # Add approved template if provided (takes priority over RAG search)
+        if approved_template and not errors and not review:
+            parts.append(f"\n{approved_template}")
+            parts.append("\nIMPORTANT: Use the above examples as templates. Adapt them to solve the specific task.")
+            logger.info("[Generator] Using approved RAG template")
+        # Fallback to old RAG behavior if no approved template
+        elif self.use_rag and not errors and not review and not approved_template:
             # Only use RAG on first generation (not on retries)
             try:
+                logger.info("[Generator] Retrieving RAG context...")
                 context = self._get_rag_context(task)
                 if context:
                     parts.append(f"\n{context}")
-                    logger.info("[Generator] Added RAG context")
+                    logger.info(f"[Generator] Added RAG context ({len(context)} chars)")
             except Exception as e:
                 logger.warning(f"[Generator] RAG retrieval failed: {e}")
 
         if errors:
             parts.append(f"\nPrevious code had errors:\n{errors}\n\nFix these errors.")
+            logger.info(f"[Generator] Fixing errors ({len(errors)} chars)")
         if review:
             parts.append(f"\nReviewer feedback:\n{review}\n\nApply these improvements.")
+            logger.info(f"[Generator] Applying review feedback ({len(review)} chars)")
 
         parts.append("\nWrite the Lua code now:")
         prompt = "\n".join(parts)
@@ -45,12 +70,17 @@ class GeneratorAgent(BaseAgent):
         # On retries (errors or review present), use direct invoke to avoid
         # re-running the full strategy on a fix — the fix prompt is already focused.
         if errors or review:
+            logger.info("[Generator] Using direct invoke (retry mode)")
             raw = self.invoke(prompt)
         else:
+            logger.info("[Generator] Using strategy-based invoke (first attempt)")
             raw = self.invoke_with_strategy(prompt)
 
         # LLMs often wrap code in ```lua ... ``` despite prompt instructions — strip it
-        return self.strip_code_fences(raw)
+        logger.info(f"[Generator] Stripping code fences from response ({len(raw)} chars)")
+        cleaned = self.strip_code_fences(raw)
+        logger.info(f"[Generator] Code generation complete ({len(cleaned)} chars)")
+        return cleaned
 
     def _get_rag_context(self, task: str, k: int = 3, max_length: int = 1500) -> str:
         """

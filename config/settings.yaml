@@ -5,13 +5,15 @@
 
 llm:
   backend: ollama            # fallback if LLM_BACKEND not in .env
-  model: deepseek-r1:8b      # fallback if LLM_MODEL not in .env (lightweight default)
+  model: qwen2.5-coder:7b-instruct-q4_K_M    # fallback if LLM_MODEL not in .env (widely available)
   temperature: 0.2
   ollama_base_url: http://localhost:11434
-  ollama_timeout: 60         # HTTP timeout for Ollama requests (seconds)
+  ollama_timeout: 120         # HTTP timeout for Ollama requests (seconds)
 
 # Per-agent defaults (overridden by GENERATOR_BACKEND, REVIEWER_MODEL, etc. in .env)
 # Optimized for 7B-12B models: use local models for simple tasks, cloud for complex reasoning
+# IMPORTANT: All settings below are COMMENTED OUT by default.
+# The system will use the default LLM from above unless you uncomment and configure per-agent overrides.
 agents:
   generator:
     # backend: ollama
@@ -57,9 +59,11 @@ rag:
   persist_directory: .veai/chroma        # Where to store vector DB
   embedding_model: all-MiniLM-L6-v2      # Fast, lightweight embeddings (384 dim)
   collection_name: lua_knowledge         # ChromaDB collection name
-  retrieval_k: 5                         # Number of examples to retrieve (increased for approver)
-  max_context_length: 2000               # Max chars for RAG context (increased for better templates)
+  retrieval_k: 3                         # Number of examples to retrieve (optimized for 7B models)
+  max_context_length: 1500               # Max chars for RAG context (optimized for 7B models)
   approval_threshold: 0.6                # Minimum confidence for approver to accept examples
+  cache_enabled: true                    # Enable RAG result caching for similar tasks
+  cache_max_size: 100                    # Maximum number of cached results
 
 # External MCP tools that agents can use during generation (optional).
 # Powered by langchain-mcp-adapters (official LangChain <-> MCP bridge).

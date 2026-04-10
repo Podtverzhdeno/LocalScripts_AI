@@ -5,6 +5,8 @@ Analyzes task/spec and creates a project plan with file structure and dependenci
 
 from agents.base import BaseAgent
 from langchain_core.language_models import BaseChatModel
+from utils.parsing import parse_json_robust
+from schemas import ProjectPlan
 
 
 class ArchitectAgent(BaseAgent):
@@ -49,44 +51,24 @@ Keep it simple - 3-7 files maximum. Focus on core functionality.
 
         response = self.invoke(prompt)
 
-        # Parse JSON from response - handle multiple formats
-        import json
-        import re
-
-        # Try 1: Extract from markdown code blocks
-        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            # Try 2: Find JSON object directly (greedy match)
-            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-            else:
-                # Try 3: Entire response might be JSON
-                json_str = response.strip()
-
-        # Clean up common issues
-        json_str = json_str.strip()
-
-        # Remove trailing commas before closing brackets (invalid JSON)
-        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
-
+        # Use robust JSON parsing with Pydantic validation
         try:
-            plan = json.loads(json_str)
+            plan = parse_json_robust(
+                response,
+                schema=ProjectPlan,
+                llm=self.llm,
+                fallback_to_minimal=True
+            )
 
-            # Validate required fields
-            if "files" not in plan or "order" not in plan:
-                raise ValueError("Missing required fields: 'files' or 'order'")
+            # Convert Pydantic model to dict for backward compatibility
+            if hasattr(plan, 'model_dump'):
+                return plan.model_dump()
+            elif hasattr(plan, 'dict'):
+                return plan.dict()
+            else:
+                return plan
 
-            # Ensure structure field exists
-            if "structure" not in plan:
-                plan["structure"] = "Project structure"
-
-            return plan
-
-        except json.JSONDecodeError as e:
-            # If parsing fails, log the response for debugging
-            print(f"[Architect] Failed to parse JSON. Error: {e}")
+        except Exception as e:
+            print(f"[Architect] Failed to parse response. Error: {e}")
             print(f"[Architect] Response was:\n{response[:500]}...")
-            raise ValueError(f"Invalid JSON from architect: {e}\nResponse: {response[:200]}")
+            raise ValueError(f"Invalid response from architect: {e}\nResponse: {response[:200]}")

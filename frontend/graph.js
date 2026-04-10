@@ -13,27 +13,37 @@ class PipelineGraph {
         this.nodeStats = {}; // Track execution count and timing per node
         this.mode = mode;
 
-        // Quick mode: RAG Retrieve → RAG Approve → Generator → Validator → Reviewer
+        // Quick mode: START → Clarifier → RAG Retrieve → RAG Approve → Generator → Validator → Checkpoint → Reviewer
         this.quickNodes = [
-            { id: 'start', label: 'START', x: 80, y: 250, type: 'start' },
-            { id: 'rag_retrieve', label: 'Retriever', x: 220, y: 250, type: 'agent', agent: 'retriever', desc: 'Searches knowledge base', color: '#06b6d4' },
-            { id: 'rag_approve', label: 'Approver', x: 360, y: 250, type: 'agent', agent: 'approver', desc: 'Evaluates relevance', color: '#ec4899' },
-            { id: 'generate', label: 'Generator', x: 500, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
-            { id: 'validate', label: 'Validator', x: 640, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'review', label: 'Reviewer', x: 780, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'fail', label: 'FAIL', x: 640, y: 400, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 920, y: 250, type: 'end', color: '#10b981' }
+            { id: 'start', label: 'START', x: 50, y: 250, type: 'start' },
+            { id: 'clarify', label: 'Clarifier', x: 150, y: 250, type: 'agent', agent: 'clarifier', desc: 'Analyzes task ambiguity', color: '#f59e0b' },
+            { id: 'rag_retrieve', label: 'Retriever', x: 250, y: 250, type: 'agent', agent: 'retriever', desc: 'Searches knowledge base', color: '#06b6d4' },
+            { id: 'rag_approve', label: 'Approver', x: 350, y: 250, type: 'agent', agent: 'approver', desc: 'Evaluates relevance', color: '#ec4899' },
+            { id: 'generate', label: 'Generator', x: 450, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'validate', label: 'Validator', x: 550, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
+            { id: 'checkpoint', label: 'Checkpoint', x: 650, y: 250, type: 'agent', agent: 'checkpoint', desc: 'User approval', color: '#a855f7' },
+            { id: 'review', label: 'Reviewer', x: 750, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'clarify_errors', label: 'Error Clarifier', x: 550, y: 150, type: 'agent', agent: 'clarifier', desc: 'Clarifies after errors', color: '#f97316' },
+            { id: 'fail', label: 'FAIL', x: 550, y: 400, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 850, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.quickEdges = [
-            { from: 'start', to: 'rag_retrieve', label: '' },
+            { from: 'start', to: 'clarify', label: '' },
+            { from: 'clarify', to: 'rag_retrieve', label: 'clear' },
+            { from: 'clarify', to: 'clarify', label: 'questions', curve: true, type: 'wait' },
             { from: 'rag_retrieve', to: 'rag_approve', label: '' },
             { from: 'rag_approve', to: 'generate', label: '' },
             { from: 'generate', to: 'validate', label: '' },
-            { from: 'validate', to: 'review', label: 'OK' },
-            { from: 'validate', to: 'generate', label: 'errors', curve: true, type: 'retry' },
+            { from: 'validate', to: 'checkpoint', label: 'OK' },
+            { from: 'validate', to: 'clarify_errors', label: '2+ errors', type: 'error' },
+            { from: 'validate', to: 'generate', label: 'retry', curve: true, type: 'retry' },
             { from: 'validate', to: 'fail', label: 'max iter', type: 'fail' },
-            { from: 'review', to: 'end', label: 'approved' },
+            { from: 'clarify_errors', to: 'generate', label: 'clarified' },
+            { from: 'checkpoint', to: 'review', label: 'approved' },
+            { from: 'checkpoint', to: 'generate', label: 'changes', curve: true, type: 'retry' },
+            { from: 'checkpoint', to: 'checkpoint', label: 'alternatives', curve: true, type: 'wait' },
+            { from: 'review', to: 'end', label: 'done' },
             { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' }
         ];
 

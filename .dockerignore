@@ -11,7 +11,7 @@ build/
 .pytest_cache/
 
 # Virtual environments
-.env
+# NOTE: .env is NOT ignored - needed for configuration in container
 .venv
 venv/
 ENV/
@@ -48,3 +48,5 @@ examples/
 
 # Tests
 tests/
+test_*.py
+rebuild_rag.py

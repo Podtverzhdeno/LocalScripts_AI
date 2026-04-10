@@ -12,6 +12,14 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+# Fix Unicode encoding for Windows console
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except:
+        pass  # Fallback: use ASCII replacements
+
 import yaml
 
 # Load .env from project root (not cwd) so it works regardless of launch directory
@@ -187,7 +195,7 @@ Examples:
         )
     except Exception as e:
         err = str(e)
-        print(f"\n  ✗ Pipeline error: {err}\n")
+        print(f"\n  Pipeline error: {err}\n")
         if "api_key" in err.lower() or "authentication" in err.lower() or "401" in err:
             print("  Hint: Check OPENAI_API_KEY in your .env file")
         elif "not found" in err.lower() or "404" in err or "does not exist" in err.lower():

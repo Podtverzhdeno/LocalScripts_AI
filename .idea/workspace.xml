@@ -1,19 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="64ebb831-8453-4958-b38f-602b2c364a0d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/mcp_server/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mcp_server/claude_desktop_config.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mcp_server/server.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../turboquant-lite/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../turboquant-lite/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../turboquant-lite/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../turboquant-lite/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dockerignore" beforeDir="false" afterPath="$PROJECT_DIR$/.dockerignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGES_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MTS_HACKATHON.md" beforeDir="false" afterPath="$PROJECT_DIR$/MTS_HACKATHON.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/NEW_AGENTS_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PROGRESS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/QUICKSTART_SMALL_MODELS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SMALL_MODEL_OPTIMIZATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SUMMARY_SMALL_MODELS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TESTING_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/approver.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/approver.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/architect.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/architect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/reviewer.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/reviewer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/specification.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/specification.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/test_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/test_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/validator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/agents.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/agents.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/config/loader.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/settings.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/settings.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/graph.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/graph.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/session.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/session.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph/nodes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph/pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/state.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph/state.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rag/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/rag/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rag/knowledge_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/rag/knowledge_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/strategies/cot.py" beforeDir="false" afterPath="$PROJECT_DIR$/strategies/cot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,6 +59,10 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -44,6 +77,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
@@ -51,20 +85,20 @@
     &quot;explyt.approve.tool.call.doNotAsk&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/user/IdeaProjects/localscript&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/user/IdeaProjects/Check/LocalScripts_AI&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.explyt.plugin.intellij.settings2.LlmIntegrationConfigurator&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\user\IdeaProjects\Check\LocalScripts_AI\tests" />
+      <recent name="C:\Users\user\IdeaProjects\Check\LocalScripts_AI" />
       <recent name="C:\Users\user\IdeaProjects\localscript" />
       <recent name="C:\Users\user\IdeaProjects\localscript\agents" />
       <recent name="C:\Users\user\IdeaProjects\localscript\config" />
-      <recent name="C:\Users\user\IdeaProjects\localscript\examples" />
-      <recent name="C:\Users\user\IdeaProjects\localscript\graph" />
     </key>
   </component>
   <component name="RunManager">

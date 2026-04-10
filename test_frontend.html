@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend</title>
+</head>
+<body>
+    <h1>Frontend Test</h1>
+    <button id="quickModeBtn">Quick Mode</button>
+    <button id="projectModeBtn">Project Mode</button>
+    <div id="output"></div>
+
+    <script src="http://127.0.0.1:8000/static/app.js"></script>
+    <script>
+        console.log('Testing switchMode function:', typeof switchMode);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const quickBtn = document.getElementById('quickModeBtn');
+            const projectBtn = document.getElementById('projectModeBtn');
+            const output = document.getElementById('output');
+
+            if (quickBtn) {
+                quickBtn.addEventListener('click', () => {
+                    console.log('Quick mode clicked');
+                    switchMode('quick');
+                    output.innerHTML = 'Quick mode activated';
+                });
+            }
+            if (projectBtn) {
+                projectBtn.addEventListener('click', () => {
+                    console.log('Project mode clicked');
+                    switchMode('project');
+                    output.innerHTML = 'Project mode activated';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

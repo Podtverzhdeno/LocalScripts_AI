@@ -14,21 +14,28 @@ _CONFIG_DIR = Path(__file__).parent
 def load_settings() -> dict:
     """Load and cache settings.yaml."""
     path = _CONFIG_DIR / "settings.yaml"
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-@lru_cache(maxsize=2)
-def load_agent_config(use_small_prompts: bool = False) -> dict:
+@lru_cache(maxsize=3)
+def load_agent_config(use_small_prompts: bool = False, use_lowcode_prompts: bool = False) -> dict:
     """
-    Load and cache agents.yaml or agents_small.yaml.
+    Load and cache agents.yaml, agents_small.yaml, or agents_lowcode.yaml.
 
     Args:
         use_small_prompts: If True, load agents_small.yaml (optimized for 7B models)
+        use_lowcode_prompts: If True, load agents_lowcode.yaml (optimized for LowCode + 7B)
     """
-    filename = "agents_small.yaml" if use_small_prompts else "agents.yaml"
+    if use_lowcode_prompts:
+        filename = "agents_lowcode.yaml"
+    elif use_small_prompts:
+        filename = "agents_small.yaml"
+    else:
+        filename = "agents.yaml"
+
     path = _CONFIG_DIR / filename
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -36,21 +43,27 @@ def get_agent_prompt(role: str) -> str:
     """
     Return the system_prompt for a given agent role.
 
-    Automatically uses agents_small.yaml if USE_SMALL_PROMPTS=true in env
-    or if model name suggests a small model (7b, 8b in name).
+    Priority:
+    1. USE_LOWCODE_PROMPTS=true → agents_lowcode.yaml (LowCode + 7B optimized)
+    2. USE_SMALL_PROMPTS=true → agents_small.yaml (7B optimized)
+    3. Auto-detect small models (7b, 8b in name) → agents_small.yaml
+    4. Default → agents.yaml
     """
     import os
 
-    # Check explicit env var
+    # Check for LowCode mode (highest priority)
+    use_lowcode = os.getenv("USE_LOWCODE_PROMPTS", "").lower() == "true"
+
+    # Check explicit small prompts env var
     use_small = os.getenv("USE_SMALL_PROMPTS", "").lower() == "true"
 
     # Auto-detect small models by name
-    if not use_small:
+    if not use_small and not use_lowcode:
         model_name = os.getenv("LLM_MODEL", "").lower()
         small_indicators = ["7b", "8b", "1b", "3b"]
         use_small = any(indicator in model_name for indicator in small_indicators)
 
-    cfg = load_agent_config(use_small_prompts=use_small)
+    cfg = load_agent_config(use_small_prompts=use_small, use_lowcode_prompts=use_lowcode)
     agent = cfg.get(role, {})
     return agent.get("system_prompt", f"You are a {role} agent.")
 

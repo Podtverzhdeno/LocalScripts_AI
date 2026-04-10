@@ -1,0 +1,7 @@
+2026-04-07 14:51:09,834 | INFO    | localscript.api | Starting LocalScript API on http://127.0.0.1:8000
+INFO:     Started server process [1824]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000): only one usage of each socket address (protocol/network address/port) is normally permitted
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.

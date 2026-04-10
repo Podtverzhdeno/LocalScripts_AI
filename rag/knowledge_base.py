@@ -965,6 +965,242 @@ end)""",
 
 LOWCODE_PATTERN_EXAMPLES = [
     {
+        "description": "Get last element from array (wf.vars context)",
+        "code": """-- Task: Из полученного списка email получи последний
+-- Context: wf.vars.emails = ["user1@example.com", "user2@example.com", "user3@example.com"]
+
+-- Solution: Use Lua's # operator to get array length
+return wf.vars.emails[#wf.vars.emails]
+
+-- Explanation:
+-- #wf.vars.emails returns the length of the array (3)
+-- wf.vars.emails[3] returns the last element""",
+        "category": "lowcode",
+        "tags": ["array", "last-element", "wf.vars", "simple"]
+    },
+    {
+        "description": "Increment counter variable (wf.vars context)",
+        "code": """-- Task: Увеличивай значение переменной try_count_n на каждой итерации
+-- Context: wf.vars.try_count_n = 3
+
+-- Solution: Simple increment
+return wf.vars.try_count_n + 1
+
+-- Result: 4
+-- Note: This returns the new value, doesn't modify wf.vars directly""",
+        "category": "lowcode",
+        "tags": ["counter", "increment", "wf.vars", "simple"]
+    },
+    {
+        "description": "Clear specific fields in nested object (wf.vars context)",
+        "code": """-- Task: Для полученных данных из предыдущего REST запроса очисти значения переменных ID, ENTITY_ID, CALL
+-- Context: wf.vars.RESTbody = {result = [{ID = 123, ENTITY_ID = 456, CALL = "example", OTHER = "value"}]}
+
+-- Solution: Set specific fields to nil
+local data = wf.vars.RESTbody.result[1]
+data.ID = nil
+data.ENTITY_ID = nil
+data.CALL = nil
+
+return data
+-- Result: {OTHER = "value"}""",
+        "category": "lowcode",
+        "tags": ["object", "clear", "nil", "wf.vars", "rest"]
+    },
+    {
+        "description": "Filter array by field value (wf.vars context)",
+        "code": """-- Task: Из полученного массива users оставь только тех, у кого поле active равно true
+-- Context: wf.vars.users = [{name="Alice", active=true}, {name="Bob", active=false}, {name="Charlie", active=true}]
+
+-- Solution: Filter with loop
+local result = _utils.array.new()
+for _, user in ipairs(wf.vars.users) do
+    if user.active == true then
+        table.insert(result, user)
+    end
+end
+
+return result
+-- Result: [{name="Alice", active=true}, {name="Charlie", active=true}]""",
+        "category": "lowcode",
+        "tags": ["array", "filter", "wf.vars", "loop"]
+    },
+    {
+        "description": "Concatenate strings with space (wf.vars context)",
+        "code": """-- Task: Объедини имя и фамилию пользователя в одну строку через пробел
+-- Context: wf.vars.first_name = "Иван", wf.vars.last_name = "Петров"
+
+-- Solution: Use .. operator for concatenation
+return wf.vars.first_name .. " " .. wf.vars.last_name
+
+-- Result: "Иван Петров"
+-- Note: .. is Lua's string concatenation operator""",
+        "category": "lowcode",
+        "tags": ["string", "concatenate", "wf.vars", "simple"]
+    },
+    {
+        "description": "Validate email format (wf.vars context)",
+        "code": """-- Task: Проверь, является ли строка валидным email адресом
+-- Context: wf.vars.email = "test@example.com"
+
+-- Solution: Check for @ symbol and basic structure
+local email = wf.vars.email
+
+-- Basic validation: must contain @ and have text before and after
+local has_at = string.find(email, "@") ~= nil
+local parts = {}
+for part in string.gmatch(email, "[^@]+") do
+    table.insert(parts, part)
+end
+
+-- Valid if: has @, exactly 2 parts, both parts non-empty
+local is_valid = has_at and #parts == 2 and #parts[1] > 0 and #parts[2] > 0
+
+return is_valid
+-- Result: true""",
+        "category": "lowcode",
+        "tags": ["string", "validation", "email", "wf.vars"]
+    },
+    {
+        "description": "Sum all numbers in array (wf.vars context)",
+        "code": """-- Task: Посчитай сумму всех чисел в массиве numbers
+-- Context: wf.vars.numbers = [10, 20, 30, 40, 50]
+
+-- Solution: Loop and accumulate
+local sum = 0
+for _, num in ipairs(wf.vars.numbers) do
+    sum = sum + num
+end
+
+return sum
+-- Result: 150""",
+        "category": "lowcode",
+        "tags": ["array", "sum", "loop", "wf.vars", "math"]
+    },
+    {
+        "description": "Format Unix timestamp to DD.MM.YYYY (wf.vars context)",
+        "code": """-- Task: Преобразуй timestamp в читаемый формат даты DD.MM.YYYY
+-- Context: wf.vars.timestamp = 1609459200
+
+-- Solution: Use os.date with format string
+local timestamp = wf.vars.timestamp
+local date_table = os.date("*t", timestamp)
+
+-- Format as DD.MM.YYYY
+local formatted = string.format(
+    "%02d.%02d.%04d",
+    date_table.day,
+    date_table.month,
+    date_table.year
+)
+
+return formatted
+-- Result: "01.01.2021"
+-- Note: os.date("*t", timestamp) returns a table with day, month, year fields""",
+        "category": "lowcode",
+        "tags": ["date", "timestamp", "format", "wf.vars", "os.date"]
+    }
+]
+
+
+# ============================================================
+# LowCode Best Practices (MTS Octapi)
+# ============================================================
+
+LOWCODE_BEST_PRACTICES = [
+    {
+        "description": "Always use wf.vars for variable access in LowCode",
+        "code": """-- GOOD: Access variables through wf.vars
+local email = wf.vars.user_email
+local count = wf.vars.try_count_n
+
+-- BAD: Direct variable access (won't work in LowCode)
+-- local email = user_email  -- ERROR: undefined variable
+
+-- GOOD: Return values directly
+return wf.vars.emails[#wf.vars.emails]
+
+-- GOOD: Modify and return
+local data = wf.vars.data
+data.processed = true
+return data""",
+        "category": "lowcode",
+        "tags": ["best-practice", "wf.vars", "access-pattern"]
+    },
+    {
+        "description": "Use _utils.array for array creation in LowCode",
+        "code": """-- GOOD: Create arrays with _utils.array.new()
+local result = _utils.array.new()
+for _, item in ipairs(wf.vars.items) do
+    if item.active then
+        table.insert(result, item)
+    end
+end
+return result
+
+-- GOOD: Mark existing table as array
+local data = {1, 2, 3}
+_utils.array.markAsArray(data)
+return data
+
+-- BAD: Plain table might not be recognized as array
+-- return {1, 2, 3}  -- May cause issues in LowCode""",
+        "category": "lowcode",
+        "tags": ["best-practice", "array", "_utils", "lowcode-specific"]
+    },
+    {
+        "description": "Handle nil values safely in LowCode",
+        "code": """-- GOOD: Check for nil before accessing
+local email = wf.vars.user and wf.vars.user.email or "default@example.com"
+
+-- GOOD: Use pcall for risky operations
+local ok, result = pcall(function()
+    return wf.vars.data.nested.field
+end)
+if ok then
+    return result
+else
+    return nil
+end
+
+-- GOOD: Provide defaults
+local count = wf.vars.count or 0
+return count + 1
+
+-- BAD: Direct access without checking
+-- return wf.vars.user.email  -- ERROR if user is nil""",
+        "category": "lowcode",
+        "tags": ["best-practice", "nil-handling", "safety", "error-handling"]
+    },
+    {
+        "description": "Efficient string operations in LowCode",
+        "code": """-- GOOD: Use string.format for complex formatting
+local name = wf.vars.first_name
+local age = wf.vars.age
+return string.format("%s is %d years old", name, age)
+
+-- GOOD: Use table.concat for multiple concatenations
+local parts = {wf.vars.first_name, wf.vars.middle_name, wf.vars.last_name}
+return table.concat(parts, " ")
+
+-- BAD: Multiple .. operations (slower)
+-- return wf.vars.first_name .. " " .. wf.vars.middle_name .. " " .. wf.vars.last_name
+
+-- GOOD: Pattern matching for validation
+local email = wf.vars.email
+return string.match(email, "^[%w%._%+%-]+@[%w%.%-]+%.%w+$") ~= nil""",
+        "category": "lowcode",
+        "tags": ["best-practice", "string", "performance", "format"]
+    }
+]
+
+
+# ============================================================
+# Event-driven architecture with event emitter
+# ============================================================
+
+LOWCODE_INTEGRATION_EXAMPLES = [
+    {
         "description": "Event-driven architecture with event emitter",
         "code": """local EventEmitter = {}
 EventEmitter.__index = EventEmitter
@@ -1699,7 +1935,9 @@ def create_knowledge_base_documents() -> List[Document]:
         COROUTINE_EXAMPLES +
         STRING_PROCESSING_EXAMPLES +
         TABLE_DATA_EXAMPLES +
-        LOWCODE_PATTERN_EXAMPLES +  # MTS Hackathon 2026 - Low-code patterns
+        LOWCODE_PATTERN_EXAMPLES +  # MTS Octapi public tasks
+        LOWCODE_BEST_PRACTICES +    # LowCode best practices
+        LOWCODE_INTEGRATION_EXAMPLES +  # Original low-code patterns
         INTEGRATION_EXAMPLES  # MTS Hackathon 2026 - Integration patterns
     )
 

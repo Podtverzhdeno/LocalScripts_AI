@@ -5,6 +5,8 @@ Converts high-level descriptions into actionable specs with functions, API, data
 
 from agents.base import BaseAgent
 from langchain_core.language_models import BaseChatModel
+from utils.parsing import parse_json_robust
+from schemas import FileSpecification
 import json
 
 
@@ -81,13 +83,26 @@ Be specific and concrete. List actual function names, parameters, and return typ
 
         response = self.invoke(prompt)
 
-        # Parse JSON response
+        # Use robust JSON parsing with Pydantic validation
         try:
-            spec = self._parse_json_response(response)
-            return spec
-        except json.JSONDecodeError as e:
-            print(f"[SpecificationAgent] Warning: Failed to parse JSON: {e}")
-            # Return minimal spec
+            spec = parse_json_robust(
+                response,
+                schema=FileSpecification,
+                llm=self.llm,
+                fallback_to_minimal=True
+            )
+
+            # Convert Pydantic model to dict for backward compatibility
+            if hasattr(spec, 'model_dump'):
+                return spec.model_dump()
+            elif hasattr(spec, 'dict'):
+                return spec.dict()
+            else:
+                return spec
+
+        except Exception as e:
+            print(f"[SpecificationAgent] Warning: Failed to parse response: {e}")
+            # Return minimal spec as fallback
             return {
                 "file": file_info['name'],
                 "functions": [],
@@ -130,18 +145,3 @@ Be specific and concrete. List actual function names, parameters, and return typ
             functions.append(f"{name}({params_clean})")
 
         return functions[:10]  # Limit to 10 functions
-
-    def _parse_json_response(self, response: str) -> dict:
-        """Parse JSON from LLM response, handling markdown fences."""
-        # Remove markdown code fences if present
-        response = response.strip()
-        if response.startswith("```"):
-            lines = response.split("\n")
-            # Remove first line (```json or ```)
-            lines = lines[1:]
-            # Remove last line (```)
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            response = "\n".join(lines)
-
-        return json.loads(response)

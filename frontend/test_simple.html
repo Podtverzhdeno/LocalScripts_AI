@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Button Test</title>
+</head>
+<body>
+    <h1>Click Test</h1>
+    <button id="testBtn" onclick="alert('Button clicked!')">Click Me</button>
+    <br><br>
+    <button id="projectModeBtn" onclick="switchMode('project')">Project Mode</button>
+
+    <div id="output" style="margin-top: 20px; padding: 10px; background: #eee;"></div>
+
+    <script>
+        function switchMode(mode) {
+            console.log('switchMode called:', mode);
+            document.getElementById('output').innerHTML = 'Mode: ' + mode;
+        }
+    </script>
+</body>
+</html>

@@ -35,7 +35,7 @@ _SIMPLE_KEYWORDS = {"fibonacci", "factorial", "sort", "reverse", "count", "sum",
 def _estimate_complexity(prompt: str) -> str:
     prompt_lower = prompt.lower()
     word_count = len(prompt.split())
-    
+
     if word_count < 10 and any(kw in prompt_lower for kw in _SIMPLE_KEYWORDS):
         return "simple"
     elif word_count > 30 or any(kw in prompt_lower for kw in {"parser", "compiler", "tree", "graph", "cache", "concurrent"}):
@@ -53,15 +53,15 @@ class ChainOfThoughtStrategy(ReasoningStrategy):
 
         # Step 1: Reasoning с явным word limit под сложность
         word_limit = {"simple": 80, "medium": 150, "complex": 250}[complexity]
-        
+
         reasoning_prompt = (
             f"Task: {prompt}\n\n"
             f"Create implementation plan. Max {word_limit} words."
         )
-        
+
         logger.info("[cot] Step 1/2: reasoning (limit=%d words)", word_limit)
         reasoning = self._call_llm(reasoning_prompt, system=_REASONING_SYSTEM)
-        
+
         # Валидируем что reasoning не содержит код (малые модели часто нарушают инструкцию)
         if "```" in reasoning or reasoning.count("\n") > 20:
             logger.warning("[cot] Reasoning looks like code, truncating")
@@ -74,10 +74,10 @@ class ChainOfThoughtStrategy(ReasoningStrategy):
             f"Implementation plan:\n{reasoning}\n\n"
             f"Write the Lua code now. Follow the plan exactly."
         )
-        
+
         logger.info("[cot] Step 2/2: generating code")
         code = self._call_llm(code_prompt, system=_CODE_SYSTEM)
-        
+
         logger.info(
             "[cot] Done — complexity=%s reasoning=%d chars code=%d chars",
             complexity, len(reasoning), len(code)

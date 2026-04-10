@@ -40,5 +40,18 @@ class AgentState(TypedDict):
     rag_decision: Optional[dict]       # ApproverAgent decision: {"approved": bool, "reason": str, ...}
     approved_template: Optional[str]   # Approved RAG template for GeneratorAgent (if decision["approved"])
 
+    # Clarification workflow (NEW - for ClarifierAgent)
+    clarification_questions: Optional[list]  # [{"question": str, "options": list, "required": bool}]
+    user_answers: Optional[dict]             # {"0": "answer1", "1": "answer2"}
+    needs_clarification: bool                # True if waiting for user input
+    clarification_attempted: bool            # True if clarification was already tried (avoid loops)
+
+    # Checkpoint workflow (NEW - for CheckpointAgent)
+    checkpoint_pending: bool                 # True if waiting for user approval
+    checkpoint_action: Optional[str]         # "approve" | "reject" | "alternatives" | "save_to_kb"
+    user_feedback: Optional[str]             # User's change request feedback
+    alternatives: Optional[list]             # List of alternative code implementations
+    save_to_knowledge_base: bool             # True if user wants to save approved code to RAG
+
     # LangGraph messages (for agent memory within a node)
     messages: Annotated[list, add_messages]

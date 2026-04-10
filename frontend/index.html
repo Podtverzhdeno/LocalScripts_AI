@@ -92,9 +92,15 @@
             <div class="flex items-center gap-4">
                 <!-- Pipeline visualization - Quick Mode -->
                 <div id="quickPipeline" class="hidden sm:flex items-center gap-1.5 text-[10px] text-gray-500">
+                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium">Clarifier</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-medium">RAG</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">Generator</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-medium">Validator</span>
+                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">Validator</span>
+                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium">Checkpoint</span>
                     <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 font-medium">Reviewer</span>
                 </div>
@@ -301,8 +307,8 @@
     <!-- ── Footer ── -->
     <footer class="border-t border-white/5 mt-20">
         <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-gray-600">
-            <span>LocalScript v0.1.0 • RAG-Enhanced Multi-Agent System</span>
-            <span id="footerPipeline">Generator → Validator → Reviewer</span>
+            <span>LocalScript v0.1.0 • RAG-Enhanced Multi-Agent System • Interactive Mode</span>
+            <span id="footerPipeline">Clarifier → RAG → Generator → Validator → Checkpoint → Reviewer</span>
         </div>
     </footer>
 
@@ -339,7 +345,7 @@
                     projectPipeline.classList.remove('flex');
                 }
                 if (footerPipeline) {
-                    footerPipeline.textContent = 'Generator → Validator → Reviewer';
+                    footerPipeline.textContent = 'Clarifier → RAG → Generator → Validator → Checkpoint → Reviewer';
                 }
                 if (modeDescription) {
                     modeDescription.textContent = 'Fast single-file generation — describe a task and get working Lua code in seconds.';

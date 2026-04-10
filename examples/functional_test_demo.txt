@@ -1,0 +1,12 @@
+# Functional Testing Example
+
+Write a function to validate email addresses according to RFC 5322 basic rules.
+
+Requirements:
+- Accept valid emails like "user@example.com"
+- Reject emails without @ symbol
+- Reject emails with invalid domain
+- Reject empty or nil inputs
+- Handle edge cases gracefully
+
+The function should return true for valid emails and false for invalid ones.
