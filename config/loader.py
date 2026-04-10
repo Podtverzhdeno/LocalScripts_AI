@@ -1,13 +1,23 @@
 """
 Shared config loader — used by all modules.
 Caches settings after first load to avoid repeated file reads.
+Cache is automatically invalidated when config files are modified.
 """
 
 from pathlib import Path
 from functools import lru_cache
 import yaml
+import os
 
 _CONFIG_DIR = Path(__file__).parent
+
+
+def _get_file_mtime(filepath: Path) -> float:
+    """Get file modification time, return 0 if file doesn't exist."""
+    try:
+        return filepath.stat().st_mtime
+    except (OSError, FileNotFoundError):
+        return 0.0
 
 
 @lru_cache(maxsize=1)
@@ -18,10 +28,23 @@ def load_settings() -> dict:
         return yaml.safe_load(f)
 
 
-@lru_cache(maxsize=3)
+# Cache with file modification time as part of the key
+@lru_cache(maxsize=10)
+def _load_agent_config_cached(filename: str, mtime: float) -> dict:
+    """
+    Internal cached loader with mtime in key.
+    When file is modified, mtime changes -> cache miss -> reload.
+    """
+    path = _CONFIG_DIR / filename
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
 def load_agent_config(use_small_prompts: bool = False, use_lowcode_prompts: bool = False) -> dict:
     """
     Load and cache agents.yaml, agents_small.yaml, or agents_lowcode.yaml.
+
+    Cache is automatically invalidated when the file is modified.
 
     Args:
         use_small_prompts: If True, load agents_small.yaml (optimized for 7B models)
@@ -35,8 +58,10 @@ def load_agent_config(use_small_prompts: bool = False, use_lowcode_prompts: bool
         filename = "agents.yaml"
 
     path = _CONFIG_DIR / filename
-    with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    mtime = _get_file_mtime(path)
+
+    # Cache key includes mtime - when file changes, cache misses
+    return _load_agent_config_cached(filename, mtime)
 
 
 def get_agent_prompt(role: str) -> str:
