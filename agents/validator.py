@@ -78,8 +78,39 @@ class ValidatorAgent(BaseAgent):
         # Reconstruct code without trailing return
         code_without_return = '\n'.join(code_lines)
 
+        # Special case: if code is just a return statement, skip tests
+        # Tests expect functions, but simple returns don't need testing
+        if not code_without_return.strip():
+            # Code is just "return something" - execute directly without tests
+            logger.info("[Validator] Simple return statement detected, skipping tests")
+            result: LuaResult = self.runner.execute(code, iteration)
+            self._last_result = result
+
+            if result.success:
+                logger.info(f"[Validator] ✓ Code executed successfully (no tests)")
+                return {
+                    "valid": True,
+                    "errors": [],
+                    "passed": 0,
+                    "failed": 0,
+                    "details": "Simple return statement, no tests generated"
+                }
+            else:
+                logger.warning(f"[Validator] ✗ Execution failed: {result.stderr}")
+                return {
+                    "valid": False,
+                    "errors": [result.stderr],
+                    "passed": 0,
+                    "failed": 0,
+                    "details": result.stderr
+                }
+
         # Combine: code (without return) + tests + return (if existed)
-        combined_parts = [code_without_return, "\n-- ═══ Functional Tests ═══", test_code]
+        combined_parts = []
+        if code_without_return.strip():  # Only add if not empty
+            combined_parts.append(code_without_return)
+        combined_parts.append("\n-- ═══ Functional Tests ═══")
+        combined_parts.append(test_code)
         if trailing_return:
             combined_parts.append(f"\n-- Return result for LowCode\n{trailing_return}")
 

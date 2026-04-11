@@ -256,6 +256,27 @@ class LuaRunner:
 
     def _wrap_with_profiling(self, code: str) -> str:
         """Wrap code with profiling instrumentation."""
+        # Check if code ends with a return statement
+        lines = code.rstrip().split('\n')
+        has_trailing_return = False
+        return_statement = ""
+
+        # Find trailing return (ignoring comments and empty lines)
+        for i in range(len(lines) - 1, -1, -1):
+            line = lines[i].strip()
+            if not line or line.startswith('--'):
+                continue
+            if line.startswith('return '):
+                has_trailing_return = True
+                return_statement = lines[i]
+                lines = lines[:i]  # Remove return from code
+                break
+            else:
+                break
+
+        code_without_return = '\n'.join(lines)
+
+        # Build profiled code: start profiling -> code -> end profiling -> return
         profiling_wrapper = '''
 -- ═══ Profiling Start ═══
 local _start_time = os.clock()
@@ -263,7 +284,7 @@ collectgarbage("collect")
 local _mem_before = collectgarbage("count")
 
 -- ═══ User Code ═══
-''' + code + '''
+''' + code_without_return + '''
 
 -- ═══ Profiling End ═══
 collectgarbage("collect")
@@ -273,6 +294,11 @@ local _mem_used = _mem_after - _mem_before
 
 io.stderr:write(string.format("\\n[PROFILE] time=%.6f memory=%.2f\\n", _elapsed, _mem_used))
 '''
+
+        # Add return at the very end if it existed
+        if has_trailing_return:
+            profiling_wrapper += '\n' + return_statement + '\n'
+
         return profiling_wrapper
 
     def _parse_memory_from_output(self, output: str) -> int:

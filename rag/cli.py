@@ -31,7 +31,7 @@ def cmd_init(args):
     initialize_rag_with_examples(rag)
 
     stats = rag.get_stats()
-    print(f"\n✓ Knowledge base initialized")
+    print(f"\n[OK] Knowledge base initialized")
     print(f"  Documents: {stats['total_documents']}")
     print(f"  Model: {stats['embedding_model']}")
     print(f"  Location: {stats['persist_directory']}")
@@ -91,7 +91,7 @@ def cmd_clear(args):
     rag = create_rag_system(rag_config)
     rag.clear()
 
-    print("✓ Knowledge base cleared")
+    print("[OK] Knowledge base cleared")
 
 
 def cmd_add_example(args):
@@ -124,7 +124,7 @@ def cmd_add_example(args):
         category=category
     )
 
-    print("\n✓ Example added")
+    print("\n[OK] Example added")
     stats = rag.get_stats()
     print(f"  Total documents: {stats['total_documents']}")
 

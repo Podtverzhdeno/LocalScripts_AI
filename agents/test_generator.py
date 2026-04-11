@@ -34,36 +34,14 @@ class TestGeneratorAgent(BaseAgent):
         """
         logger.info(f"[TestGenerator] Starting test generation (task: {len(task)} chars, code: {len(code)} chars)")
 
+        # Use system prompt from config (loaded in BaseAgent.__init__)
+        # User message contains task + code
         prompt = f"""Task: {task}
 
 Generated code:
 {code}
 
-Generate functional test cases for this code. Follow these rules:
-
-1. Create 5-10 test cases that verify the business logic
-2. Use Lua assert() statements with descriptive messages
-3. Cover:
-   - Normal/valid inputs (happy path)
-   - Invalid inputs (edge cases)
-   - Boundary conditions
-   - Error cases
-
-4. Format:
-   -- Test case N: description
-   assert(function_call(input) == expected_output, "Error message")
-
-5. Return ONLY Lua test code, no explanations
-6. Tests should be executable and demonstrate the code works
-
-Example for email validator:
--- Test 1: valid email
-assert(validate_email("user@example.com") == true, "Valid email should pass")
-
--- Test 2: missing @
-assert(validate_email("invalid.email") == false, "Email without @ should fail")
-
-Generate tests now:"""
+Generate functional test cases now:"""
 
         logger.info("[TestGenerator] Invoking LLM for test generation...")
         raw = self.invoke(prompt)

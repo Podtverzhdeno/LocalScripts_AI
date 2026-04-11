@@ -20,6 +20,9 @@ from langchain_core.documents import Document
 
 logger = logging.getLogger("localscript.rag")
 
+# Global cache for embedding model (avoid reloading on every RAG init)
+_EMBEDDING_MODEL_CACHE = {}
+
 
 class RAGSystem:
     """
@@ -51,12 +54,21 @@ class RAGSystem:
 
         logger.info(f"Initializing RAG with model: {embedding_model}")
 
-        # Initialize embeddings (local, fast)
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=embedding_model,
-            model_kwargs={'device': 'cpu'},  # Use GPU if available: 'cuda'
-            encode_kwargs={'normalize_embeddings': True}
-        )
+        # Check if embedding model is already cached
+        if embedding_model in _EMBEDDING_MODEL_CACHE:
+            logger.info(f"Using cached embedding model: {embedding_model}")
+            self.embeddings = _EMBEDDING_MODEL_CACHE[embedding_model]
+        else:
+            # Initialize embeddings (local, fast) - only once per model
+            logger.info(f"Loading embedding model (first time): {embedding_model}")
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=embedding_model,
+                model_kwargs={'device': 'cpu'},  # Use GPU if available: 'cuda'
+                encode_kwargs={'normalize_embeddings': True}
+            )
+            # Cache for future use
+            _EMBEDDING_MODEL_CACHE[embedding_model] = self.embeddings
+            logger.info(f"Embedding model cached for future use")
 
         # Initialize vector store
         self.vectorstore = Chroma(

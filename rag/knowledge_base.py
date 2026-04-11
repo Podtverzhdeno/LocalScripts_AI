@@ -1910,6 +1910,374 @@ end""",
 
 
 # ============================================================
+# LowCode Basic Rules and Patterns (MTS Octapi)
+# ============================================================
+
+LOWCODE_RULES = [
+    {
+        "description": "LowCode Rule 1: Accessing workflow variables. Use wf.vars to access workflow variables. Use wf.initVariables for initial variables. Example: wf.vars.emails, wf.vars.try_count_n, wf.initVariables.recallTime",
+        "code": """-- Accessing workflow variables
+-- wf.vars - runtime variables
+local emails = wf.vars.emails
+local counter = wf.vars.try_count_n
+
+-- wf.initVariables - initial variables
+local startTime = wf.initVariables.recallTime
+
+-- Nested access
+local result = wf.vars.RESTbody.result
+local datum = wf.vars.json.IDOC.ZCDF_HEAD.DATUM""",
+        "category": "lowcode",
+        "tags": ["wf.vars", "wf.initVariables", "variables", "access", "basics"]
+    },
+    {
+        "description": "LowCode Rule 2: Array operations. Use # operator for array length. Arrays are 1-indexed in Lua. Use ipairs() for iteration. Use _utils.array.new() to create new arrays. Use _utils.array.markAsArray(arr) to mark variable as array.",
+        "code": """-- Array length
+local length = #wf.vars.emails
+
+-- Last element (arrays are 1-indexed)
+local last = wf.vars.emails[#wf.vars.emails]
+
+-- First element
+local first = wf.vars.emails[1]
+
+-- Iteration with ipairs
+for i, email in ipairs(wf.vars.emails) do
+    print(i, email)
+end
+
+-- Create new array
+local newArray = _utils.array.new()
+
+-- Mark existing variable as array
+_utils.array.markAsArray(myVar)""",
+        "category": "lowcode",
+        "tags": ["array", "length", "indexing", "ipairs", "_utils.array", "iteration"]
+    },
+    {
+        "description": "LowCode Rule 3: Table/Object operations. Use pairs() to iterate over tables. Use nil to delete keys. Check field existence with ~= nil. Access nested fields with dot notation.",
+        "code": """-- Iterate over table
+for key, value in pairs(wf.vars.RESTbody.result) do
+    print(key, value)
+end
+
+-- Delete key by setting to nil
+myTable.unwantedKey = nil
+
+-- Check if field exists
+if wf.vars.json.IDOC.ZCDF_HEAD.DATUM ~= nil then
+    -- field exists
+end
+
+-- Nested access
+local packages = wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES""",
+        "category": "lowcode",
+        "tags": ["table", "pairs", "nil", "object", "nested", "iteration"]
+    },
+    {
+        "description": "LowCode Rule 4: Type checking and conversion. Use type() to check variable type. Use tonumber() to convert strings to numbers. Check for nil before operations. Handle both single values and arrays.",
+        "code": """-- Type checking
+if type(myVar) == "table" then
+    -- it's a table/array
+elseif type(myVar) == "string" then
+    -- it's a string
+end
+
+-- String to number conversion
+local num = tonumber("42")
+local squared = num * num
+
+-- Check for nil
+if myVar ~= nil then
+    -- safe to use
+end
+
+-- Ensure array (handle both single value and array)
+function ensureArray(value)
+    if type(value) ~= "table" then
+        return {value}
+    end
+    return value
+end""",
+        "category": "lowcode",
+        "tags": ["type", "tonumber", "nil", "conversion", "type_checking"]
+    },
+    {
+        "description": "LowCode Rule 5: String operations. Use string.format() for formatting. Use string.sub() for substrings. Use .. for concatenation. Pattern matching with string.match().",
+        "code": """-- String formatting (ISO 8601 example)
+local datum = "20231015"
+local time = "153000"
+local year = string.sub(datum, 1, 4)
+local month = string.sub(datum, 5, 6)
+local day = string.sub(datum, 7, 8)
+local hour = string.sub(time, 1, 2)
+local min = string.sub(time, 3, 4)
+local sec = string.sub(time, 5, 6)
+
+local iso8601 = string.format("%s-%s-%sT%s:%s:%s+00:00",
+    year, month, day, hour, min, sec)
+
+-- Concatenation
+local fullName = firstName .. " " .. lastName
+
+-- Pattern matching
+local year, month, day = iso_str:match("(%d+)-(%d+)-(%d+)T")""",
+        "category": "lowcode",
+        "tags": ["string", "format", "substring", "concatenation", "pattern_matching"]
+    },
+    {
+        "description": "LowCode Rule 6: Filtering and mapping arrays. Create new array with _utils.array.new(). Use ipairs() to iterate. Check conditions and add matching elements. Common pattern: filter by field value.",
+        "code": """-- Filter array by condition
+local filtered = _utils.array.new()
+
+for i, item in ipairs(wf.vars.parsedCsv) do
+    -- Check if Discount or Markdown has value
+    if (item.Discount and item.Discount ~= "") or
+       (item.Markdown and item.Markdown ~= "") then
+        filtered[#filtered + 1] = item
+    end
+end
+
+return filtered""",
+        "category": "lowcode",
+        "tags": ["filter", "array", "ipairs", "_utils.array", "condition", "mapping"]
+    },
+    {
+        "description": "LowCode Rule 7: Return statement. For LowCode scripts, use return to output result. Can return simple values, arrays, or tables. Return statement should be at the end of script.",
+        "code": """-- Return simple value
+return wf.vars.emails[#wf.vars.emails]
+
+-- Return computed value
+return wf.vars.try_count_n + 1
+
+-- Return array
+return filtered
+
+-- Return table/object
+return {
+    timestamp = epoch_seconds,
+    formatted = iso8601
+}""",
+        "category": "lowcode",
+        "tags": ["return", "output", "result", "lowcode"]
+    }
+]
+
+
+# ============================================================
+# LowCode Examples from MTS Octapi Public Dataset (2026)
+# ============================================================
+
+LOWCODE_EXAMPLES = [
+    {
+        "description": "Задача 1: Последний элемент массива. Из полученного списка email получи последний. Контекст: wf.vars.emails = ['user1@example.com', 'user2@example.com', 'user3@example.com']. Ожидаемый результат: 'user3@example.com'",
+        "code": """-- Задача: Из полученного списка email получи последний
+-- Контекст: wf.vars.emails = ["user1@example.com", "user2@example.com", "user3@example.com"]
+-- Решение: используем оператор # для получения длины массива
+return wf.vars.emails[#wf.vars.emails]""",
+        "category": "lowcode",
+        "tags": ["array", "wf.vars", "last_element", "indexing"]
+    },
+    {
+        "description": "Задача 2: Счётчик попыток. Увеличивай значение переменной try_count_n на каждой итерации. Контекст: wf.vars.try_count_n = 3. Ожидаемый результат: 4",
+        "code": """-- Задача: Увеличивай значение переменной try_count_n на каждой итерации
+-- Контекст: wf.vars.try_count_n = 3
+-- Решение: простое увеличение на 1
+return wf.vars.try_count_n + 1""",
+        "category": "lowcode",
+        "tags": ["counter", "increment", "wf.vars", "arithmetic"]
+    },
+    {
+        "description": "Задача 3: Очистка значений в переменных. Для полученных данных из предыдущего REST запроса очисти значения переменных ID, ENTITY_ID, CALL (оставь только эти поля, удали остальные). Контекст: wf.vars.RESTbody.result = [{ID: 123, ENTITY_ID: 456, CALL: 'example', OTHER_KEY_1: 'value1', OTHER_KEY_2: 'value2'}]. Ожидаемый результат: [{ID: 123, ENTITY_ID: 456, CALL: 'example'}]",
+        "code": """-- Задача: Для полученных данных из предыдущего REST запроса очисти значения переменных ID, ENTITY_ID, CALL
+-- Контекст: wf.vars.RESTbody.result содержит массив объектов с разными ключами
+-- Решение: проходим по всем объектам и удаляем ключи, которые НЕ равны ID, ENTITY_ID, CALL
+result = wf.vars.RESTbody.result
+
+for _, filteredEntry in pairs(result) do
+    for key, value in pairs(filteredEntry) do
+        if key ~= "ID" and key ~= "ENTITY_ID" and key ~= "CALL" then
+            filteredEntry[key] = nil
+        end
+    end
+end
+
+return result""",
+        "category": "lowcode",
+        "tags": ["filter", "object", "keys", "wf.vars", "REST", "pairs"]
+    },
+    {
+        "description": "Задача 4: Приведение времени к ISO 8601. Преобразуй время из формата 'YYYYMMDD' и 'HHMMSS' в строку в формате ISO 8601. Контекст: wf.vars.json.IDOC.ZCDF_HEAD.DATUM = '20231015', TIME = '153000'. Ожидаемый результат: '2023-10-15T15:30:00.00000Z'",
+        "code": """-- Задача: Преобразуй время из формата 'YYYYMMDD' и 'HHMMSS' в строку в формате ISO 8601
+-- Контекст: wf.vars.json.IDOC.ZCDF_HEAD.DATUM = "20231015", TIME = "153000"
+-- Решение: разбиваем строки на части и форматируем в ISO 8601
+DATUM = wf.vars.json.IDOC.ZCDF_HEAD.DATUM
+TIME = wf.vars.json.IDOC.ZCDF_HEAD.TIME
+
+local function safe_sub(str, start, finish)
+    local s = string.sub(str, start, math.min(finish, #str))
+    return s ~= "" and s or "00"
+end
+
+year = safe_sub(DATUM, 1, 4)
+month = safe_sub(DATUM, 5, 6)
+day = safe_sub(DATUM, 7, 8)
+hour = safe_sub(TIME, 1, 2)
+minute = safe_sub(TIME, 3, 4)
+second = safe_sub(TIME, 5, 6)
+
+iso_date = string.format(
+    '%s-%s-%sT%s:%s:%s.00000Z',
+    year, month, day,
+    hour, minute, second
+)
+
+return iso_date""",
+        "category": "lowcode",
+        "tags": ["date", "time", "ISO8601", "format", "string", "wf.vars"]
+    },
+    {
+        "description": "Задача 5: Проверка типа данных. Преобразовать структуру данных так, чтобы все элементы items в ZCDF_PACKAGES всегда были представлены в виде массивов, даже если они изначально не являются массивами. Контекст: wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES = [{items: [{sku: 'A'}, {sku: 'B'}]}, {items: {sku: 'C'}}]. Ожидаемый результат: все items - массивы",
+        "code": """-- Задача: Преобразовать структуру данных так, чтобы все элементы items в ZCDF_PACKAGES всегда были массивами
+-- Контекст: items может быть объектом или массивом
+-- Решение: проверяем тип и преобразуем объект в массив с одним элементом
+function ensureArray(t)
+    if type(t) ~= "table" then
+        return {t}
+    end
+    local isArray = true
+    for k, v in pairs(t) do
+        if type(k) ~= "number" or math.floor(k) ~= k then
+            isArray = false
+            break
+        end
+    end
+    return isArray and t or {t}
+end
+
+function ensureAllItemsAreArrays(objectsArray)
+    if type(objectsArray) ~= "table" then
+        return objectsArray
+    end
+    for _, obj in ipairs(objectsArray) do
+        if type(obj) == "table" and obj.items then
+            obj.items = ensureArray(obj.items)
+        end
+    end
+    return objectsArray
+end
+
+return ensureAllItemsAreArrays(wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES)""",
+        "category": "lowcode",
+        "tags": ["type_check", "array", "ensure", "wf.vars", "ipairs"]
+    },
+    {
+        "description": "Задача 6: Фильтрация элементов массива. Отфильтруй элементы из массива, чтобы включить только те, у которых есть значения в полях Discount или Markdown. Контекст: wf.vars.parsedCsv = [{SKU: 'A001', Discount: '10%', Markdown: ''}, {SKU: 'A002', Discount: '', Markdown: '5%'}, {SKU: 'A003', Discount: null, Markdown: null}]. Ожидаемый результат: только первые 2 элемента",
+        "code": """-- Задача: Отфильтруй элементы из массива, чтобы включить только те, у которых есть значения в полях Discount или Markdown
+-- Контекст: wf.vars.parsedCsv содержит массив объектов с полями SKU, Discount, Markdown
+-- Решение: используем _utils.array.new() и фильтруем по условию
+local result = _utils.array.new()
+local items = wf.vars.parsedCsv
+
+for _, item in ipairs(items) do
+    if (item.Discount ~= "" and item.Discount ~= nil) or (item.Markdown ~= "" and item.Markdown ~= nil) then
+        table.insert(result, item)
+    end
+end
+
+return result""",
+        "category": "lowcode",
+        "tags": ["filter", "array", "wf.vars", "_utils.array", "ipairs"]
+    },
+    {
+        "description": "Задача 7: Дополнение существующего кода. Добавь переменную с квадратом числа. Контекст: число '5' нужно преобразовать в число и вычислить квадрат. Ожидаемый результат: {num: 5, squared: 25}",
+        "code": """-- Задача: Добавь переменную с квадратом числа
+-- Контекст: работа с числами, преобразование строки в число
+-- Решение: используем tonumber() для преобразования и возвращаем квадрат
+local n = tonumber('5')
+return n * n""",
+        "category": "lowcode",
+        "tags": ["variable", "tonumber", "arithmetic", "multiple_variables"]
+    },
+    {
+        "description": "Задача 8: Конвертация времени в Unix. Конвертируй время в переменной recallTime в unix-формат. Контекст: wf.initVariables.recallTime = '2023-10-15T15:30:00+00:00'. Ожидаемый результат: 1697382600 (Unix timestamp)",
+        "code": """-- Задача: Конвертируй время в переменной recallTime в unix-формат
+-- Контекст: wf.initVariables.recallTime содержит время в формате ISO 8601
+-- Решение: парсим ISO 8601 и вычисляем количество секунд с 1970-01-01
+local iso_time = wf.initVariables.recallTime
+local days_in_month = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+
+if not iso_time or not iso_time:match("^%d%d%d%d%-%d%d%-%d%dT") then
+    return nil
+end
+
+local function is_leap_year(year)
+    return (year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0)
+end
+
+local function days_since_epoch(year, month, day)
+    local days = 0
+    for y = 1970, year - 1 do
+        days = days + (is_leap_year(y) and 366 or 365)
+    end
+    for m = 1, month - 1 do
+        days = days + days_in_month[m]
+        if m == 2 and is_leap_year(year) then
+            days = days + 1
+        end
+    end
+    days = days + (day - 1)
+    return days
+end
+
+local function parse_iso8601_to_epoch(iso_str)
+    if not iso_str then
+        error("Дата не задана (nil)")
+    end
+
+    local year, month, day, hour, min, sec, ms, offset_sign, offset_hour, offset_min =
+        iso_str:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)%.(%d+)([+-])(%d+):(%d+)")
+
+    if not year then
+        year, month, day, hour, min, sec, offset_sign, offset_hour, offset_min =
+            iso_str:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)([+-])(%d+):(%d+)")
+        ms = 0
+    end
+
+    if not year then
+        error("Невозможно разобрать дату: " .. tostring(iso_str))
+    end
+
+    year = tonumber(year)
+    month = tonumber(month)
+    day = tonumber(day)
+    hour = tonumber(hour)
+    min = tonumber(min)
+    sec = tonumber(sec)
+    ms = tonumber(ms) or 0
+    offset_hour = tonumber(offset_hour)
+    offset_min = tonumber(offset_min)
+
+    local total_days = days_since_epoch(year, month, day)
+    local total_seconds = total_days * 86400 + hour * 3600 + min * 60 + sec
+
+    local offset_seconds = offset_hour * 3600 + offset_min * 60
+    if offset_sign == "-" then
+        offset_seconds = -offset_seconds
+    end
+
+    return total_seconds - offset_seconds
+end
+
+local epoch_seconds = parse_iso8601_to_epoch(iso_time)
+return epoch_seconds""",
+        "category": "lowcode",
+        "tags": ["unix_timestamp", "date", "time", "wf.initVariables", "ISO8601", "parsing"]
+    }
+]
+
+
+# ============================================================
 # Initialization Functions
 # ============================================================
 
@@ -1935,8 +2303,10 @@ def create_knowledge_base_documents() -> List[Document]:
         COROUTINE_EXAMPLES +
         STRING_PROCESSING_EXAMPLES +
         TABLE_DATA_EXAMPLES +
+        LOWCODE_RULES +             # NEW: LowCode basic rules and patterns
         LOWCODE_PATTERN_EXAMPLES +  # MTS Octapi public tasks
         LOWCODE_BEST_PRACTICES +    # LowCode best practices
+        LOWCODE_EXAMPLES +          # NEW: MTS Octapi 8 examples from PDF
         LOWCODE_INTEGRATION_EXAMPLES +  # Original low-code patterns
         INTEGRATION_EXAMPLES  # MTS Hackathon 2026 - Integration patterns
     )
