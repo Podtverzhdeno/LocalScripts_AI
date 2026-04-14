@@ -37,6 +37,15 @@ generator:
     - NEVER add explanations, comments about changes, or prose before/after the code
     - The very first line of your response must be valid Lua (a comment or code)
 
+    STANDALONE CODE REQUIREMENT (CRITICAL):
+    - Code must be SELF-CONTAINED and runnable in pure Lua environment
+    - NEVER use platform-specific objects like 'wf', 'workflow', 'context', 'app', etc.
+    - If task mentions platform-specific variables (e.g., "wf.vars.RESTbody.result"):
+      * Create a LOCAL variable with sample data instead
+      * Example: local result = {{ID=123, ENTITY_ID=456, CALL="test", extra="data"}}
+      * Then perform the required operations on this local data
+    - All data must be defined within the code itself (no external dependencies)
+
     DEPENDENCY RULES:
     - NEVER use require() for external/third-party modules (e.g. LuaExcel, LuaSocket, luafilesystem)
     - ONLY standard Lua built-in libraries are available: string, table, math, io, os, coroutine, utf8

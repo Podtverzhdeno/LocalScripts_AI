@@ -88,18 +88,16 @@ class ValidatorAgent(BaseAgent):
 
             if result.success:
                 logger.info(f"[Validator] ✓ Code executed successfully (no tests)")
-                return {
-                    "valid": True,
-                    "errors": [],
+                return True, "", {
+                    "total": 0,
                     "passed": 0,
                     "failed": 0,
                     "details": "Simple return statement, no tests generated"
                 }
             else:
                 logger.warning(f"[Validator] ✗ Execution failed: {result.stderr}")
-                return {
-                    "valid": False,
-                    "errors": [result.stderr],
+                return False, result.stderr, {
+                    "total": 0,
                     "passed": 0,
                     "failed": 0,
                     "details": result.stderr

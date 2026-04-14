@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -14,12 +15,14 @@ WORKDIR /app
 # Copy requirements first (for better caching)
 COPY requirements.txt .
 
-# Use pip cache and install with optimizations
+# Use BuildKit cache mounts for pip and HuggingFace
+# This dramatically speeds up rebuilds
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt
 
 # Pre-download embedding model with cache mount
+# Model will be cached between builds
 RUN --mount=type=cache,target=/root/.cache/huggingface \
     python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" || echo "Model download failed, will retry at runtime"
 
@@ -28,10 +31,6 @@ COPY . .
 
 # Create workspace directory
 RUN mkdir -p /app/workspace
-
-# Initialize RAG database (optional, can be done at runtime)
-# Commented out to speed up build - will init on first run if RAG_ENABLED=true
-# RUN python -m rag.cli init || echo "RAG init failed, will retry at runtime"
 
 # Expose FastAPI port
 EXPOSE 8000
@@ -42,4 +41,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 
 # Run FastAPI server on 0.0.0.0 to accept external connections
 CMD ["python", "api/server.py", "--host", "0.0.0.0"]
-

@@ -13,10 +13,12 @@ services:
       - ./workspace:/app/workspace
       - ./config:/app/config
       - ./.veai:/app/.veai
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - LLM_BACKEND=ollama
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=qwen2.5-coder:7b-instruct-q4_K_M
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM_MODEL=qwen2.5-coder:3b
       - PYTHONUNBUFFERED=1
       # RAG settings (disabled by default for faster startup)
       - RAG_ENABLED=false
@@ -41,6 +43,9 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+      - ./scripts/init-ollama.sh:/init-ollama.sh
+    environment:
+      - OLLAMA_MODEL=qwen2.5-coder:7b-instruct-q4_K_M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 10s
@@ -50,6 +55,12 @@ services:
     restart: unless-stopped
     networks:
       - localscript-network
+    command: >
+      sh -c "ollama serve &
+             sleep 5 &&
+             chmod +x /init-ollama.sh &&
+             /init-ollama.sh &&
+             wait"
     # Uncomment if you have NVIDIA GPU
     # deploy:
     #   resources:

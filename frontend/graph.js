@@ -14,52 +14,53 @@ class PipelineGraph {
         this.mode = mode;
 
         // Quick mode: START → Clarifier → RAG Retrieve → RAG Approve → Generator → Validator → Checkpoint → Reviewer
+        // Увеличены расстояния между узлами для лучшей читаемости
         this.quickNodes = [
-            { id: 'start', label: 'START', x: 50, y: 250, type: 'start' },
-            { id: 'clarify', label: 'Clarifier', x: 150, y: 250, type: 'agent', agent: 'clarifier', desc: 'Analyzes task ambiguity', color: '#f59e0b' },
-            { id: 'rag_retrieve', label: 'Retriever', x: 250, y: 250, type: 'agent', agent: 'retriever', desc: 'Searches knowledge base', color: '#06b6d4' },
-            { id: 'rag_approve', label: 'Approver', x: 350, y: 250, type: 'agent', agent: 'approver', desc: 'Evaluates relevance', color: '#ec4899' },
-            { id: 'generate', label: 'Generator', x: 450, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
-            { id: 'validate', label: 'Validator', x: 550, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'checkpoint', label: 'Checkpoint', x: 650, y: 250, type: 'agent', agent: 'checkpoint', desc: 'User approval', color: '#a855f7' },
-            { id: 'review', label: 'Reviewer', x: 750, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'clarify_errors', label: 'Error Clarifier', x: 550, y: 150, type: 'agent', agent: 'clarifier', desc: 'Clarifies after errors', color: '#f97316' },
-            { id: 'fail', label: 'FAIL', x: 550, y: 400, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 850, y: 250, type: 'end', color: '#10b981' }
+            { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
+            { id: 'clarify', label: 'Clarifier', x: 180, y: 250, type: 'agent', agent: 'clarifier', desc: 'Analyzes task ambiguity', color: '#f59e0b' },
+            { id: 'rag_retrieve', label: 'Retriever', x: 300, y: 250, type: 'agent', agent: 'retriever', desc: 'Searches knowledge base', color: '#06b6d4' },
+            { id: 'rag_approve', label: 'Approver', x: 420, y: 250, type: 'agent', agent: 'approver', desc: 'Evaluates relevance', color: '#ec4899' },
+            { id: 'generate', label: 'Generator', x: 540, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'validate', label: 'Validator', x: 660, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
+            { id: 'checkpoint', label: 'Checkpoint', x: 780, y: 250, type: 'agent', agent: 'checkpoint', desc: 'User approval', color: '#a855f7' },
+            { id: 'review', label: 'Reviewer', x: 900, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'clarify_errors', label: 'Error Clarifier', x: 660, y: 130, type: 'agent', agent: 'clarifier', desc: 'Clarifies after errors', color: '#f97316' },
+            { id: 'fail', label: 'FAIL', x: 660, y: 400, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 1020, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.quickEdges = [
             { from: 'start', to: 'clarify', label: '' },
-            { from: 'clarify', to: 'rag_retrieve', label: 'clear' },
-            { from: 'clarify', to: 'clarify', label: 'questions', curve: true, type: 'wait' },
+            { from: 'clarify', to: 'rag_retrieve', label: '' },
+            { from: 'clarify', to: 'clarify', label: '', curve: true, type: 'wait' },
             { from: 'rag_retrieve', to: 'rag_approve', label: '' },
             { from: 'rag_approve', to: 'generate', label: '' },
             { from: 'generate', to: 'validate', label: '' },
-            { from: 'validate', to: 'checkpoint', label: 'OK' },
-            { from: 'validate', to: 'clarify_errors', label: '2+ errors', type: 'error' },
-            { from: 'validate', to: 'generate', label: 'retry', curve: true, type: 'retry' },
-            { from: 'validate', to: 'fail', label: 'max iter', type: 'fail' },
-            { from: 'clarify_errors', to: 'generate', label: 'clarified' },
-            { from: 'checkpoint', to: 'review', label: 'approved' },
-            { from: 'checkpoint', to: 'generate', label: 'changes', curve: true, type: 'retry' },
-            { from: 'checkpoint', to: 'checkpoint', label: 'alternatives', curve: true, type: 'wait' },
-            { from: 'review', to: 'end', label: 'done' },
-            { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' }
+            { from: 'validate', to: 'checkpoint', label: '' },
+            { from: 'validate', to: 'clarify_errors', label: '', type: 'error' },
+            { from: 'validate', to: 'generate', label: '', curve: true, type: 'retry' },
+            { from: 'validate', to: 'fail', label: '', type: 'fail' },
+            { from: 'clarify_errors', to: 'generate', label: '' },
+            { from: 'checkpoint', to: 'review', label: '' },
+            { from: 'checkpoint', to: 'generate', label: '', curve: true, type: 'retry' },
+            { from: 'checkpoint', to: 'checkpoint', label: '', curve: true, type: 'wait' },
+            { from: 'review', to: 'end', label: '' },
+            { from: 'review', to: 'generate', label: '', curve: true, type: 'retry' }
         ];
 
         // Project mode: Architect → Specification → Generator → Validator → Reviewer → Integrator → Decomposer → Evolver
         this.projectNodes = [
             { id: 'start', label: 'START', x: 60, y: 250, type: 'start' },
-            { id: 'architect', label: 'Architect', x: 160, y: 250, type: 'agent', agent: 'architect', desc: 'Plans project structure', color: '#06b6d4' },
-            { id: 'specification', label: 'Specification', x: 280, y: 250, type: 'agent', agent: 'specification', desc: 'Creates detailed specs', color: '#ec4899' },
-            { id: 'generate', label: 'Generator', x: 400, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
-            { id: 'validate', label: 'Validator', x: 520, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
-            { id: 'review', label: 'Reviewer', x: 640, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
-            { id: 'integrator', label: 'Integrator', x: 760, y: 250, type: 'agent', agent: 'integrator', desc: 'Tests integration', color: '#f97316' },
-            { id: 'decomposer', label: 'Decomposer', x: 840, y: 150, type: 'agent', agent: 'decomposer', desc: 'Analyzes code', color: '#a855f7' },
-            { id: 'evolver', label: 'Evolver', x: 840, y: 350, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
-            { id: 'fail', label: 'FAIL', x: 520, y: 420, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 920, y: 250, type: 'end', color: '#10b981' }
+            { id: 'architect', label: 'Architect', x: 180, y: 250, type: 'agent', agent: 'architect', desc: 'Plans project structure', color: '#06b6d4' },
+            { id: 'specification', label: 'Specification', x: 320, y: 250, type: 'agent', agent: 'specification', desc: 'Creates detailed specs', color: '#ec4899' },
+            { id: 'generate', label: 'Generator', x: 460, y: 250, type: 'agent', agent: 'generator', desc: 'Writes Lua code', color: '#10b981' },
+            { id: 'validate', label: 'Validator', x: 600, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
+            { id: 'review', label: 'Reviewer', x: 740, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
+            { id: 'integrator', label: 'Integrator', x: 880, y: 250, type: 'agent', agent: 'integrator', desc: 'Tests integration', color: '#f97316' },
+            { id: 'decomposer', label: 'Decomposer', x: 980, y: 150, type: 'agent', agent: 'decomposer', desc: 'Analyzes code', color: '#a855f7' },
+            { id: 'evolver', label: 'Evolver', x: 980, y: 350, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
+            { id: 'fail', label: 'FAIL', x: 600, y: 420, type: 'end', color: '#ef4444' },
+            { id: 'end', label: 'SUCCESS', x: 1080, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.projectEdges = [
@@ -67,13 +68,13 @@ class PipelineGraph {
             { from: 'architect', to: 'specification', label: '' },
             { from: 'specification', to: 'generate', label: '' },
             { from: 'generate', to: 'validate', label: '' },
-            { from: 'validate', to: 'review', label: 'OK' },
-            { from: 'validate', to: 'generate', label: 'errors', curve: true, type: 'retry' },
-            { from: 'validate', to: 'fail', label: 'max iter', type: 'fail' },
-            { from: 'review', to: 'integrator', label: 'approved' },
-            { from: 'review', to: 'generate', label: 'improve', curve: true, type: 'retry' },
-            { from: 'integrator', to: 'decomposer', label: 'OK' },
-            { from: 'integrator', to: 'evolver', label: 'OK' },
+            { from: 'validate', to: 'review', label: '' },
+            { from: 'validate', to: 'generate', label: '', curve: true, type: 'retry' },
+            { from: 'validate', to: 'fail', label: '', type: 'fail' },
+            { from: 'review', to: 'integrator', label: '' },
+            { from: 'review', to: 'generate', label: '', curve: true, type: 'retry' },
+            { from: 'integrator', to: 'decomposer', label: '' },
+            { from: 'integrator', to: 'evolver', label: '' },
             { from: 'decomposer', to: 'end', label: '' },
             { from: 'evolver', to: 'end', label: '' }
         ];
@@ -382,17 +383,13 @@ class PipelineGraph {
                 }
             })
             .on('mouseenter', function(event, d) {
-                if (d.type === 'agent') {
-                    self.showTooltip(event, d);
-                }
+                // Tooltip disabled
             })
             .on('mousemove', function(event, d) {
-                if (d.type === 'agent') {
-                    self.moveTooltip(event);
-                }
+                // Tooltip disabled
             })
             .on('mouseleave', function() {
-                self.hideTooltip();
+                // Tooltip disabled
             });
 
         // Draw agent nodes as rounded rectangles (cards) - larger, more prominent

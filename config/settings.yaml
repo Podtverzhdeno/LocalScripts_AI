@@ -43,7 +43,7 @@ strategy:
   # reviewer: none         # future: strategies for reviewer agent
 
 pipeline:
-  max_iterations: 3
+  max_iterations: 10
   execution_timeout: 10    # seconds for lua execution
   sandbox_mode: lua        # "lua" (default, Lua-level isolation) | "docker" (full container isolation) | "none" (unsafe)
 
