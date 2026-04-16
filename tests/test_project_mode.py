@@ -39,4 +39,31 @@ try:
     llm = get_llm("architect")
     print(f"   [OK] LLM created: {type(llm).__name__}")
 
-    # ... rest of your test code ...
+    print("\n2. Creating ArchitectAgent...")
+    architect = ArchitectAgent(llm)
+    print(f"   [OK] Agent created")
+    print(f"   System prompt length: {len(architect.system_prompt)} chars")
+
+    print("\n3. Calling architect.plan()...")
+    requirements = "create hello world program"
+    print(f"   Requirements: {requirements}")
+
+    plan = architect.plan(requirements)
+
+    print("\n4. Plan received:")
+    print(f"   Files: {len(plan.get('files', []))}")
+    for f in plan.get('files', []):
+        print(f"     - {f['name']}: {f['purpose']}")
+    print(f"   Order: {plan.get('order', [])}")
+    print(f"   Structure: {plan.get('structure', 'N/A')[:100]}...")
+
+    print("\n[SUCCESS] Architect works correctly!")
+
+except Exception as e:
+    print(f"\n[ERROR] {e}")
+    if "Connection refused" in str(e) or "Errno 111" in str(e):
+        pytest.skip("Ollama connection failed", allow_module_level=True)
+    else:
+        import traceback
+        traceback.print_exc()
+        pytest.fail(f"Test failed: {e}")
