@@ -6,7 +6,7 @@
 class PipelineGraph {
     constructor(containerId, mode = 'quick') {
         this.container = d3.select(`#${containerId}`);
-        this.width = 1000; // Increased from 900
+        this.width = 1200; // Increased from 1000 to show all nodes
         this.height = 500;
         this.currentNode = null;
         this.history = [];
@@ -57,10 +57,10 @@ class PipelineGraph {
             { id: 'validate', label: 'Validator', x: 600, y: 250, type: 'agent', agent: 'validator', desc: 'Compiles & runs code', color: '#3b82f6' },
             { id: 'review', label: 'Reviewer', x: 740, y: 250, type: 'agent', agent: 'reviewer', desc: 'Quality check', color: '#8b5cf6' },
             { id: 'integrator', label: 'Integrator', x: 880, y: 250, type: 'agent', agent: 'integrator', desc: 'Tests integration', color: '#f97316' },
-            { id: 'decomposer', label: 'Decomposer', x: 980, y: 150, type: 'agent', agent: 'decomposer', desc: 'Analyzes code', color: '#a855f7' },
-            { id: 'evolver', label: 'Evolver', x: 980, y: 350, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
+            { id: 'decomposer', label: 'Decomposer', x: 1020, y: 150, type: 'agent', agent: 'decomposer', desc: 'Analyzes code', color: '#a855f7' },
+            { id: 'evolver', label: 'Evolver', x: 1020, y: 350, type: 'agent', agent: 'evolver', desc: 'Optimizes & refines', color: '#f59e0b' },
             { id: 'fail', label: 'FAIL', x: 600, y: 420, type: 'end', color: '#ef4444' },
-            { id: 'end', label: 'SUCCESS', x: 1080, y: 250, type: 'end', color: '#10b981' }
+            { id: 'end', label: 'SUCCESS', x: 1140, y: 250, type: 'end', color: '#10b981' }
         ];
 
         this.projectEdges = [
